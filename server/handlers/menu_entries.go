@@ -17,6 +17,7 @@ var validMenuEntries = map[string]struct{}{
 	"adm-groups":                   {},
 	"adm-claim-mappings":           {},
 	"adm-om3-grants":               {},
+	"adm-sysreport":                {},
 	"adm-field-constraints":        {},
 	"adm-form-connectors":          {},
 	"adm-notifications":            {},

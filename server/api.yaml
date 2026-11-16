@@ -8927,6 +8927,288 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /sysreport/secure_patterns:
+    get:
+      operationId: GetSysreportSecurePatterns
+      description: |
+        List the sysreport secure patterns. A secure pattern is a regular
+        expression: the content and diffs of the sysreport files whose path
+        matches any pattern are only shown to the managers, the node
+        responsibles and the groups a sysreport authorization lets see them.
+        Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportSecurePatternListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostSysreportSecurePatterns
+      description: |
+        Create a sysreport secure pattern. The pattern is a regular expression
+        of the Go syntax (RE2), matched from the start of the file path, as the
+        sysreport access checks do. Requires the Manager privilege. The action
+        is logged in the collector's log and the table change is announced.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysreportSecurePatternInput'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportSecurePatternListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /sysreport/secure_patterns/{id}:
+    get:
+      operationId: GetSysreportSecurePattern
+      description: A sysreport secure pattern. Requires a user authentication.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/inQueryProps'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportSecurePatternListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteSysreportSecurePattern
+      description: |
+        Delete a sysreport secure pattern. Requires the Manager privilege. The
+        action is logged in the collector's log and the table change is
+        announced.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    type: string
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /sysreport/authorizations:
+    get:
+      operationId: GetSysreportAuthorizations
+      description: |
+        List the sysreport authorizations. An authorization is an
+        organizational group, filterset and regular expression tuple: the
+        members of the group can see the sysreport content and diffs of the
+        files whose path matches the regular expression, on the nodes of the
+        filterset. Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportAuthorizationListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostSysreportAuthorizations
+      description: |
+        Create a sysreport authorization. The group is given by group_id or
+        group_name, the filterset by fset_id or fset_name. The pattern is a
+        regular expression of the Go syntax (RE2), matched from the start of the
+        file path, as the sysreport access checks do. Requires the Manager
+        privilege. The action is logged in the collector's log and the table
+        change is announced.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysreportAuthorizationInput'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportAuthorizationListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /sysreport/authorizations/{id}:
+    get:
+      operationId: GetSysreportAuthorization
+      description: A sysreport authorization. Requires a user authentication.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/inQueryProps'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportAuthorizationListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteSysreportAuthorization
+      description: |
+        Delete a sysreport authorization. Requires the Manager privilege. The
+        action is logged in the collector's log and the table change is
+        announced.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    type: string
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /sysreport/purges/{purge_id}:
     get:
       operationId: GetSysreportPurge
@@ -30660,6 +30942,102 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SearchGroup'
+
+    SysreportSecurePatternRow:
+      type: object
+      description: |
+        A sysreport secure pattern. Every property is optional: the `props`
+        query parameter selects which columns the server returns.
+      properties:
+        id:
+          type: integer
+        pattern:
+          type: string
+
+    SysreportSecurePatternListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/SysreportSecurePatternRow'
+            - type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: integer
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+
+    SysreportSecurePatternInput:
+      type: object
+      required: [pattern]
+      properties:
+        pattern:
+          type: string
+          description: A regular expression matched from the start of the file path.
+
+    SysreportAuthorizationRow:
+      type: object
+      description: |
+        A sysreport authorization, with the names of its group and filterset,
+        empty when they do not exist any more. Every property is optional: the
+        `props` query parameter selects which columns the server returns.
+      properties:
+        id:
+          type: integer
+        pattern:
+          type: string
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        fset_id:
+          type: integer
+        fset_name:
+          type: string
+
+    SysreportAuthorizationListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/SysreportAuthorizationRow'
+            - type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: integer
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+
+    SysreportAuthorizationInput:
+      type: object
+      required: [pattern]
+      description: The group by group_id or group_name, the filterset by fset_id or fset_name.
+      properties:
+        group_id:
+          type: integer
+          description: The id of the group to authorize. Exclusive with group_name.
+        group_name:
+          type: string
+          description: The name of the group to authorize. Exclusive with group_id.
+        fset_id:
+          type: integer
+          description: The id of the filterset of the nodes the authorization applies to. Exclusive with fset_name.
+        fset_name:
+          type: string
+          description: The name of the filterset of the nodes the authorization applies to. Exclusive with fset_id.
+        pattern:
+          type: string
+          description: A regular expression matched from the start of the file path.
 
     SysreportFileStat:
       type: object

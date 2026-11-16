@@ -45,6 +45,12 @@ func oidcMappingListCol(name string) *schema.Col {
 	return &schema.Col{T: schema.TAuthOidcMappings, Name: name, Nullable: true}
 }
 
+// sysrepAllowListCol is a computed column of the sysreport authorization lists,
+// whose derived table is named after sysrep_allow.
+func sysrepAllowListCol(name string) *schema.Col {
+	return &schema.Col{T: schema.TSysrepAllow, Name: name, Nullable: true}
+}
+
 // The orchestration tables, which the generated schema does not hold yet: the
 // derived tables of the orchestrations and runs lists (cdb/db_orchestrations_list.go)
 // are named after them. To drop once schema/tables.go is generated again from a
@@ -1769,6 +1775,26 @@ var propsMapping = map[string]propMapping{
 			"org_roles":       colStr(oidcMappingListCol("org_roles")),
 			"author":          colStr(schema.AuthOidcMappingsAuthor),
 			"updated":         colStr(schema.AuthOidcMappingsUpdated),
+		},
+	},
+	"sysrep_secure": {
+		Available: []string{"id", "pattern"},
+		Props: map[string]propDef{
+			"id":      col(schema.SysrepSecureID),
+			"pattern": colStr(schema.SysrepSecurePattern),
+		},
+	},
+	"sysrep_allow": {
+		Available: []string{"id", "pattern", "group_id", "group_name", "fset_id", "fset_name"},
+		Props: map[string]propDef{
+			"id":       col(schema.SysrepAllowID),
+			"pattern":  colStr(schema.SysrepAllowPattern),
+			"group_id": col(schema.SysrepAllowGroupID),
+			"fset_id":  col(schema.SysrepAllowFsetID),
+			// The names of the group and filterset, computed by the derived table of
+			// the authorization queries.
+			"group_name": colStr(sysrepAllowListCol("group_name")),
+			"fset_name":  colStr(sysrepAllowListCol("fset_name")),
 		},
 	},
 	"filterset": {

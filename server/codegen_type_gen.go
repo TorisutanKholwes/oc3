@@ -6834,6 +6834,53 @@ type SwitchPortRow struct {
 	SwUpdated   *string `json:"sw_updated,omitempty"`
 }
 
+// SysreportAuthorizationInput The group by group_id or group_name, the filterset by fset_id or fset_name.
+type SysreportAuthorizationInput struct {
+	// FsetId The id of the filterset of the nodes the authorization applies to. Exclusive with fset_name.
+	FsetId *int `json:"fset_id,omitempty"`
+
+	// FsetName The name of the filterset of the nodes the authorization applies to. Exclusive with fset_id.
+	FsetName *string `json:"fset_name,omitempty"`
+
+	// GroupId The id of the group to authorize. Exclusive with group_name.
+	GroupId *int `json:"group_id,omitempty"`
+
+	// GroupName The name of the group to authorize. Exclusive with group_id.
+	GroupName *string `json:"group_name,omitempty"`
+
+	// Pattern A regular expression matched from the start of the file path.
+	Pattern string `json:"pattern"`
+}
+
+// SysreportAuthorizationListResponse defines model for SysreportAuthorizationListResponse.
+type SysreportAuthorizationListResponse struct {
+	Data SysreportAuthorizationListResponse_Data `json:"data"`
+	Meta *ListMeta                               `json:"meta,omitempty"`
+}
+
+// SysreportAuthorizationListResponseData0 defines model for .
+type SysreportAuthorizationListResponseData0 = []SysreportAuthorizationRow
+
+// SysreportAuthorizationListResponseData1 defines model for .
+type SysreportAuthorizationListResponseData1 map[string]map[string]int
+
+// SysreportAuthorizationListResponse_Data defines model for SysreportAuthorizationListResponse.Data.
+type SysreportAuthorizationListResponse_Data struct {
+	union json.RawMessage
+}
+
+// SysreportAuthorizationRow A sysreport authorization, with the names of its group and filterset,
+// empty when they do not exist any more. Every property is optional: the
+// `props` query parameter selects which columns the server returns.
+type SysreportAuthorizationRow struct {
+	FsetId    *int    `json:"fset_id,omitempty"`
+	FsetName  *string `json:"fset_name,omitempty"`
+	GroupId   *int    `json:"group_id,omitempty"`
+	GroupName *string `json:"group_name,omitempty"`
+	Id        *int    `json:"id,omitempty"`
+	Pattern   *string `json:"pattern,omitempty"`
+}
+
 // SysreportChange A report that changed something.
 type SysreportChange struct {
 	Cid string `json:"cid"`
@@ -6993,6 +7040,36 @@ type SysreportPurgeNode struct {
 // SysreportPurgeResponse defines model for SysreportPurgeResponse.
 type SysreportPurgeResponse struct {
 	Data SysreportPurge `json:"data"`
+}
+
+// SysreportSecurePatternInput defines model for SysreportSecurePatternInput.
+type SysreportSecurePatternInput struct {
+	// Pattern A regular expression matched from the start of the file path.
+	Pattern string `json:"pattern"`
+}
+
+// SysreportSecurePatternListResponse defines model for SysreportSecurePatternListResponse.
+type SysreportSecurePatternListResponse struct {
+	Data SysreportSecurePatternListResponse_Data `json:"data"`
+	Meta *ListMeta                               `json:"meta,omitempty"`
+}
+
+// SysreportSecurePatternListResponseData0 defines model for .
+type SysreportSecurePatternListResponseData0 = []SysreportSecurePatternRow
+
+// SysreportSecurePatternListResponseData1 defines model for .
+type SysreportSecurePatternListResponseData1 map[string]map[string]int
+
+// SysreportSecurePatternListResponse_Data defines model for SysreportSecurePatternListResponse.Data.
+type SysreportSecurePatternListResponse_Data struct {
+	union json.RawMessage
+}
+
+// SysreportSecurePatternRow A sysreport secure pattern. Every property is optional: the `props`
+// query parameter selects which columns the server returns.
+type SysreportSecurePatternRow struct {
+	Id      *int    `json:"id,omitempty"`
+	Pattern *string `json:"pattern,omitempty"`
 }
 
 // SysreportTimediffResponse defines model for SysreportTimediffResponse.
@@ -16856,6 +16933,130 @@ type GetServicesStatusLogParams struct {
 	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
 }
 
+// GetSysreportAuthorizationsParams defines parameters for GetSysreportAuthorizations.
+type GetSysreportAuthorizationsParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// GetSysreportAuthorizationParams defines parameters for GetSysreportAuthorization.
+type GetSysreportAuthorizationParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+}
+
+// GetSysreportSecurePatternsParams defines parameters for GetSysreportSecurePatterns.
+type GetSysreportSecurePatternsParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// GetSysreportSecurePatternParams defines parameters for GetSysreportSecurePattern.
+type GetSysreportSecurePatternParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+}
+
 // DeleteTagsJSONBody defines parameters for DeleteTags.
 type DeleteTagsJSONBody struct {
 	// TagId Tag tag_id, or tag record id
@@ -18173,6 +18374,12 @@ type DeleteServicesInstancesJSONRequestBody DeleteServicesInstancesJSONBody
 
 // PostServicesInstancesDeleteJSONRequestBody defines body for PostServicesInstancesDelete for application/json ContentType.
 type PostServicesInstancesDeleteJSONRequestBody = InstancesInput
+
+// PostSysreportAuthorizationsJSONRequestBody defines body for PostSysreportAuthorizations for application/json ContentType.
+type PostSysreportAuthorizationsJSONRequestBody = SysreportAuthorizationInput
+
+// PostSysreportSecurePatternsJSONRequestBody defines body for PostSysreportSecurePatterns for application/json ContentType.
+type PostSysreportSecurePatternsJSONRequestBody = SysreportSecurePatternInput
 
 // DeleteTagsJSONRequestBody defines body for DeleteTags for application/json ContentType.
 type DeleteTagsJSONRequestBody DeleteTagsJSONBody
@@ -21865,6 +22072,130 @@ func (t SwitchPortListResponse_Data) MarshalJSON() ([]byte, error) {
 }
 
 func (t *SwitchPortListResponse_Data) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSysreportAuthorizationListResponseData0 returns the union data inside the SysreportAuthorizationListResponse_Data as a SysreportAuthorizationListResponseData0
+func (t SysreportAuthorizationListResponse_Data) AsSysreportAuthorizationListResponseData0() (SysreportAuthorizationListResponseData0, error) {
+	var body SysreportAuthorizationListResponseData0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSysreportAuthorizationListResponseData0 overwrites any union data inside the SysreportAuthorizationListResponse_Data as the provided SysreportAuthorizationListResponseData0
+func (t *SysreportAuthorizationListResponse_Data) FromSysreportAuthorizationListResponseData0(v SysreportAuthorizationListResponseData0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSysreportAuthorizationListResponseData0 performs a merge with any union data inside the SysreportAuthorizationListResponse_Data, using the provided SysreportAuthorizationListResponseData0
+func (t *SysreportAuthorizationListResponse_Data) MergeSysreportAuthorizationListResponseData0(v SysreportAuthorizationListResponseData0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSysreportAuthorizationListResponseData1 returns the union data inside the SysreportAuthorizationListResponse_Data as a SysreportAuthorizationListResponseData1
+func (t SysreportAuthorizationListResponse_Data) AsSysreportAuthorizationListResponseData1() (SysreportAuthorizationListResponseData1, error) {
+	var body SysreportAuthorizationListResponseData1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSysreportAuthorizationListResponseData1 overwrites any union data inside the SysreportAuthorizationListResponse_Data as the provided SysreportAuthorizationListResponseData1
+func (t *SysreportAuthorizationListResponse_Data) FromSysreportAuthorizationListResponseData1(v SysreportAuthorizationListResponseData1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSysreportAuthorizationListResponseData1 performs a merge with any union data inside the SysreportAuthorizationListResponse_Data, using the provided SysreportAuthorizationListResponseData1
+func (t *SysreportAuthorizationListResponse_Data) MergeSysreportAuthorizationListResponseData1(v SysreportAuthorizationListResponseData1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SysreportAuthorizationListResponse_Data) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SysreportAuthorizationListResponse_Data) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSysreportSecurePatternListResponseData0 returns the union data inside the SysreportSecurePatternListResponse_Data as a SysreportSecurePatternListResponseData0
+func (t SysreportSecurePatternListResponse_Data) AsSysreportSecurePatternListResponseData0() (SysreportSecurePatternListResponseData0, error) {
+	var body SysreportSecurePatternListResponseData0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSysreportSecurePatternListResponseData0 overwrites any union data inside the SysreportSecurePatternListResponse_Data as the provided SysreportSecurePatternListResponseData0
+func (t *SysreportSecurePatternListResponse_Data) FromSysreportSecurePatternListResponseData0(v SysreportSecurePatternListResponseData0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSysreportSecurePatternListResponseData0 performs a merge with any union data inside the SysreportSecurePatternListResponse_Data, using the provided SysreportSecurePatternListResponseData0
+func (t *SysreportSecurePatternListResponse_Data) MergeSysreportSecurePatternListResponseData0(v SysreportSecurePatternListResponseData0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSysreportSecurePatternListResponseData1 returns the union data inside the SysreportSecurePatternListResponse_Data as a SysreportSecurePatternListResponseData1
+func (t SysreportSecurePatternListResponse_Data) AsSysreportSecurePatternListResponseData1() (SysreportSecurePatternListResponseData1, error) {
+	var body SysreportSecurePatternListResponseData1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSysreportSecurePatternListResponseData1 overwrites any union data inside the SysreportSecurePatternListResponse_Data as the provided SysreportSecurePatternListResponseData1
+func (t *SysreportSecurePatternListResponse_Data) FromSysreportSecurePatternListResponseData1(v SysreportSecurePatternListResponseData1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSysreportSecurePatternListResponseData1 performs a merge with any union data inside the SysreportSecurePatternListResponse_Data, using the provided SysreportSecurePatternListResponseData1
+func (t *SysreportSecurePatternListResponse_Data) MergeSysreportSecurePatternListResponseData1(v SysreportSecurePatternListResponseData1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SysreportSecurePatternListResponse_Data) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SysreportSecurePatternListResponse_Data) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
