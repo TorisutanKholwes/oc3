@@ -868,14 +868,11 @@ func (d *jobFeedDaemonStatus) dbUpdateInstances(ctx context.Context) error {
 		}
 	}
 
-	for nodeID, objectIDs := range objectIDsToPingByNodeID {
-		slog.Debug("ping instance: objectIDsToPingByNodeID")
-		if _, err := d.oDb.SvcmonRefreshTimestamp(ctx, nodeID, objectIDs...); err != nil {
-			return fmt.Errorf("dbUpdateInstances can't refresh node id: %s instances svcmon timestamp[%v]: %w", nodeID, objectIDs, err)
-		}
-		if _, err := d.oDb.ResmonRefreshTimestamp(ctx, nodeID, objectIDs...); err != nil {
-			return fmt.Errorf("dbUpdateInstances can't refresh node id: %s instances resmon timestamp[%v]: %w", nodeID, objectIDs, err)
-		}
+	// The instances reported unchanged are confirmed by the last_comm of their
+	// node, written by dbFetchNodes: their rows are not rewritten (see
+	// cdb.lastSeen), but their views refresh as when they were.
+	if len(objectIDsToPingByNodeID) > 0 {
+		d.oDb.SetChange("svcmon", "resmon")
 	}
 	for nodeID, objectIDs := range objectIDsToDropByNodeID {
 		slog.Debug("drop instances: objectIDsToDropByNodeID")
@@ -891,7 +888,7 @@ func (d *jobFeedDaemonStatus) dbUpdateInstances(ctx context.Context) error {
 	for nodeID := range d.byNodeID {
 		nodeIDs = append(nodeIDs, nodeID)
 	}
-	if err := d.oDb.ResmonPurgeExpired(ctx, d.now.Add(-time.Second), nodeIDs...); err != nil {
+	if err := d.oDb.ResmonPurgeExpired(ctx, d.now.Add(-time.Second), nodeIDs, objectIDsToPingByNodeID); err != nil {
 		return fmt.Errorf("dbUpdateInstances ResmonPurgeExpired: %w", err)
 	}
 

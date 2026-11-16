@@ -199,45 +199,6 @@ func (oDb *DB) InstancesFromObjectIDs(ctx context.Context, objectIDs ...string) 
 	return instances, nil
 }
 
-// SvcmonRefreshTimestamp updates svcmon.mon_updated, svcmon_log_last.mon_end for object ids with node id.
-func (oDb *DB) SvcmonRefreshTimestamp(ctx context.Context, nodeID string, objectIDs ...string) (updates bool, err error) {
-	defer logDuration("SvcmonRefreshTimestamp", time.Now())
-	const (
-		qUpdateSvcmon        = "UPDATE `svcmon` SET `mon_updated` = NOW() WHERE `node_id` = ? AND `svc_id` IN (%s)"
-		qUpdateSvcmonLogLast = "UPDATE `svcmon_log_last` SET `mon_end` = NOW() WHERE `node_id` = ? AND `svc_id` IN (%s)"
-	)
-	var (
-		count int64
-		query string
-	)
-	begin := time.Now()
-	if len(objectIDs) == 0 {
-		return
-	}
-	placeholders := strings.Repeat("?,", len(objectIDs)-1) + "?"
-	args := make([]any, len(objectIDs)+1)
-	args[0] = nodeID
-	for i, v := range objectIDs {
-		args[i+1] = v
-	}
-
-	query = fmt.Sprintf(qUpdateSvcmon, placeholders)
-	if count, err = oDb.execCountContext(ctx, query, args...); err != nil {
-		return
-	} else if count > 0 {
-		updates = true
-		oDb.SetChange("svcmon")
-	}
-
-	query = fmt.Sprintf(qUpdateSvcmonLogLast, placeholders)
-	if _, err = oDb.ExecContext(ctx, query, args...); err != nil {
-		return
-	}
-
-	slog.Debug(fmt.Sprintf("SvcmonRefreshTimestamp %s", time.Since(begin)))
-	return
-}
-
 func (oDb *DB) DeleteNodeIDSvcmonInstances(ctx context.Context, nodeID string, objectIDs ...string) error {
 	defer logDuration("DeleteNodeIDSvcmonInstances", time.Now())
 	if len(objectIDs) == 0 {
