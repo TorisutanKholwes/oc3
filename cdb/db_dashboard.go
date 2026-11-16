@@ -820,21 +820,23 @@ func (oDb *DB) DashboardUpdateServiceConfigNotUpdated(ctx context.Context, maxAg
 }
 
 func (oDb *DB) DashboardUpdateInstancesNotUpdated(ctx context.Context, maxAge time.Duration) error {
+	monUpdated := lastSeen("m.mon_updated", "n.last_comm")
 	u := alertsUpsert{
 		source: `SELECT
 		  "service status not updated" AS dash_type,
-		  svc_id,
-		  IF(mon_svctype="PRD", 1, 0) AS dash_severity,
+		  m.svc_id,
+		  IF(m.mon_svctype="PRD", 1, 0) AS dash_severity,
 		  "" AS dash_fmt,
 		  "" AS dash_dict,
-		  mon_updated AS dash_created,
+		  ` + monUpdated + ` AS dash_created,
 		  "" AS dash_dict_md5,
-		  mon_svctype AS dash_env,
+		  m.mon_svctype AS dash_env,
 		  NOW() AS dash_updated,
-		  node_id,
+		  m.node_id,
 		  NULL AS dash_instance
-		FROM svcmon
-		WHERE mon_updated < DATE_SUB(NOW(), INTERVAL ? SECOND)`,
+		FROM svcmon m
+		LEFT JOIN nodes n ON n.node_id = m.node_id
+		WHERE ` + monUpdated + ` < DATE_SUB(NOW(), INTERVAL ? SECOND)`,
 		args:    []any{maxAgeSeconds(maxAge)},
 		columns: positionalAlertColumns,
 		update:  []string{"dash_updated = s.dash_updated"},
@@ -853,11 +855,12 @@ func (oDb *DB) DashboardUpdateInstancesNotUpdated(ctx context.Context, maxAge ti
 		    LEFT JOIN svcmon ON
 			dashboard.svc_id = svcmon.svc_id AND
 			dashboard.node_id = svcmon.node_id
+		    LEFT JOIN nodes n ON n.node_id = svcmon.node_id
 		    WHERE
 			dashboard.dash_type = "service status not updated" AND
 			dashboard.svc_id != "" AND
 			dashboard.node_id != "" AND
-			(svcmon.id IS NULL OR svcmon.mon_updated >= DATE_SUB(NOW(), INTERVAL ? SECOND))
+			(svcmon.id IS NULL OR ` + lastSeen("svcmon.mon_updated", "n.last_comm") + ` >= DATE_SUB(NOW(), INTERVAL ? SECOND))
 		)
 	`
 	if count, err := oDb.execCountContext(ctx, request, maxAgeSeconds(maxAge)); err != nil {
@@ -1112,7 +1115,7 @@ func (oDb *DB) DashboardUpdatePkgDiffForNode(ctx context.Context, nodeID string)
 				FROM svcmon
 				JOIN nodes ON svcmon.node_id = nodes.node_id
 				WHERE svcmon.svc_id = ?
-				AND svcmon.mon_updated > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
+				AND ` + lastSeen("svcmon.mon_updated", "nodes.last_comm") + ` > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
 				AND svcmon.mon_vmtype != ""
 				ORDER BY nodes.nodename
 			`
@@ -1123,7 +1126,7 @@ func (oDb *DB) DashboardUpdatePkgDiffForNode(ctx context.Context, nodeID string)
 				FROM svcmon
 				JOIN nodes ON svcmon.node_id = nodes.node_id
 				WHERE svcmon.svc_id = ?
-				AND svcmon.mon_updated > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
+				AND ` + lastSeen("svcmon.mon_updated", "nodes.last_comm") + ` > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
 				AND svcmon.mon_vmtype = ""
 				ORDER BY nodes.nodename
 			`
@@ -1249,7 +1252,7 @@ func (oDb *DB) DashboardUpdatePkgDiffForNode(ctx context.Context, nodeID string)
 		SELECT svcmon.svc_id, svcmon.mon_svctype, svcmon.mon_vmtype
 		FROM svcmon
 		JOIN nodes ON svcmon.node_id = nodes.node_id
-		WHERE svcmon.node_id = ? AND svcmon.mon_updated > DATE_SUB(NOW(), INTERVAL 19 MINUTE)
+		WHERE svcmon.node_id = ? AND `+lastSeen("svcmon.mon_updated", "nodes.last_comm")+` > DATE_SUB(NOW(), INTERVAL 19 MINUTE)
 	`, nodeID)
 	if err != nil {
 		return fmt.Errorf("failed to query svcmon: %v", err)

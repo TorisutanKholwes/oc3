@@ -76,6 +76,14 @@ func colStr(c *schema.Col) propDef {
 	return propDef{Col: c, SQLExpr: fmt.Sprintf("COALESCE(%s, '')", c.Qualified()), Kind: "string"}
 }
 
+// lastSeenProp is the time an instance or a resource was last confirmed: its
+// column, or the last communication of its node when later (see
+// cdb.SvcmonUpdatedSQL), filtered on as such.
+func lastSeenProp(c *schema.Col, expr func(table string) string) propDef {
+	e := expr(c.T.Name)
+	return propDef{Col: c, SQLExpr: fmt.Sprintf("COALESCE(%s, '')", e), Kind: "string", FilterExpr: e}
+}
+
 func colInt(c *schema.Col) propDef {
 	return propDef{Col: c, SQLExpr: fmt.Sprintf("COALESCE(%s, 0)", c.Qualified()), Kind: "int64"}
 }
@@ -1088,7 +1096,7 @@ var propsMapping = map[string]propMapping{
 			"mon_guestos":            colStr(schema.SvcmonMonGuestos),
 			"mon_vcpus":              colInt(schema.SvcmonMonVcpus),
 			"mon_vmem":               colInt(schema.SvcmonMonVmem),
-			"mon_updated":            colStr(schema.SvcmonMonUpdated),
+			"mon_updated":            lastSeenProp(schema.SvcmonMonUpdated, cdb.SvcmonUpdatedSQL),
 			"mon_changed":            colStr(schema.SvcmonMonChanged),
 			// Unacknowledged action errors of the last day, as the historical
 			// collector's "err" column: 0 for an instance without any.
@@ -1478,7 +1486,7 @@ var propsMapping = map[string]propMapping{
 			"res_optional": colStr(schema.ResmonResOptional),
 			"vmname":       colStr(schema.ResmonVmname),
 			"changed":      colStr(schema.ResmonChanged),
-			"updated":      colStr(schema.ResmonUpdated),
+			"updated":      lastSeenProp(schema.ResmonUpdated, cdb.ResmonUpdatedSQL),
 		},
 	},
 	// The resources of every instance (GET /resources), with the names of their
@@ -1508,7 +1516,7 @@ var propsMapping = map[string]propMapping{
 			"res_disable":  colStr(schema.ResmonResDisable),
 			"res_optional": colStr(schema.ResmonResOptional),
 			"changed":      colStr(schema.ResmonChanged),
-			"updated":      colStr(schema.ResmonUpdated),
+			"updated":      lastSeenProp(schema.ResmonUpdated, cdb.ResmonUpdatedSQL),
 		},
 		Joins: map[string]JoinDef{
 			"services": {MappingKey: "service"},

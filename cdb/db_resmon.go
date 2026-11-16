@@ -9,6 +9,17 @@ import (
 	"github.com/opensvc/oc3/schema"
 )
 
+// resmonLogSource is the v_resmon_log view, the closed status logs of the
+// resources then their current ones, these lasting until the resource was last
+// seen: a resource gone keeps the end its status log had then.
+var resmonLogSource = "(SELECT `id`, `node_id`, `svc_id`, `rid`, `res_status`, `res_begin`, `res_end`, `res_log` FROM `resmon_log`" +
+	" UNION ALL SELECT l.`id`, l.`node_id`, l.`svc_id`, l.`rid`, l.`res_status`, l.`res_begin`," +
+	" IF(EXISTS(SELECT 1 FROM `resmon` r WHERE r.`svc_id` = l.`svc_id` AND r.`node_id` = l.`node_id` AND r.`rid` = l.`rid`)," +
+	" " + lastSeen("l.`res_end`", "n.`last_comm`") + ", l.`res_end`) AS `res_end`, l.`res_log`" +
+	" FROM `resmon_log_last` l" +
+	" LEFT JOIN `nodes` n ON n.`node_id` = l.`node_id`" +
+	") v_resmon_log"
+
 // GetServiceResourceLogs returns the resmon_log entries for a given service
 func (oDb *DB) GetServiceResourceLogs(ctx context.Context, svcID string, p ListParams) ([]map[string]any, error) {
 	defer logDuration("getServiceResourceLogs", time.Now())
@@ -18,7 +29,7 @@ func (oDb *DB) GetServiceResourceLogs(ctx context.Context, svcID string, p ListP
 	}
 
 	query := "SELECT " + strings.Join(p.SelectExprs, ", ") +
-		" FROM v_resmon_log" +
+		" FROM " + resmonLogSource +
 		" WHERE svc_id = ?"
 	args := []any{svcID}
 
@@ -65,7 +76,7 @@ func (oDb *DB) GetServiceNodeResourceLogs(ctx context.Context, svcID, nodeID str
 	}
 
 	query := "SELECT " + strings.Join(p.SelectExprs, ", ") +
-		" FROM v_resmon_log" +
+		" FROM " + resmonLogSource +
 		" WHERE svc_id = ? AND node_id = ?"
 	args := []any{svcID, nodeID}
 

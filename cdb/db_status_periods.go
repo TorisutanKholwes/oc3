@@ -34,14 +34,15 @@ func (oDb *DB) ServiceStatusPeriods(ctx context.Context, svcID string, days int)
 
 // InstanceStatusPeriods returns the availability and overall status periods of
 // an instance ending in the last days: the closed ones of svcmon_log, then the
-// current one of svcmon_log_last, oldest first.
+// current one of svcmon_log_last, lasting until the instance was last seen,
+// oldest first.
 func (oDb *DB) InstanceStatusPeriods(ctx context.Context, svcID, nodeID string, days int) ([]StatusPeriod, error) {
 	query := `SELECT mon_availstatus, mon_overallstatus, DATE_FORMAT(mon_begin, ` + periodDateFormat + `), DATE_FORMAT(mon_end, ` + periodDateFormat + `)
 		FROM (
 			SELECT mon_availstatus, mon_overallstatus, mon_begin, mon_end FROM svcmon_log
 				WHERE svc_id = ? AND node_id = ? AND mon_end >= NOW() - INTERVAL ? DAY
 			UNION ALL
-			SELECT mon_availstatus, mon_overallstatus, mon_begin, mon_end FROM svcmon_log_last
+			SELECT mon_availstatus, mon_overallstatus, mon_begin, ` + lastSeen("mon_end", lastCommOf("svcmon_log_last")) + ` FROM svcmon_log_last
 				WHERE svc_id = ? AND node_id = ?
 		) t
 		ORDER BY mon_begin`
