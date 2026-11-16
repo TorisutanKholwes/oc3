@@ -309,6 +309,12 @@ func TestGetNetworkIps(t *testing.T) {
 		t.Errorf("network 1 for a manager: %d %+v", count, data)
 	}
 
+	// the team responsible for the network sees every segment
+	c, rec = networksContextAs("2", http.MethodGet, "", "Net")
+	if count, _ = ips(c, rec, "1", server.GetNetworkIpsParams{}); count != 20 {
+		t.Errorf("network 1 for its team: %d, want 20", count)
+	}
+
 	c, rec = networksContextAs("2", http.MethodGet, "", "Other")
 	expectCode(t, "no segment of the user", a.GetNetworkIps(c, "1", server.GetNetworkIpsParams{}), rec, http.StatusForbidden)
 }

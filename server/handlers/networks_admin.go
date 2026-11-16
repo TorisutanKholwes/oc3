@@ -588,7 +588,8 @@ type networkIPRange struct {
 }
 
 // GetNetworkIps handles GET /networks/{net_id}/ips, as the historical
-// collector's rest_get_network_ips, without the DNS records.
+// collector's rest_get_network_ips, without the DNS records, and with every
+// segment for the team responsible for the network.
 func (a *Api) GetNetworkIps(c echo.Context, netId string, params server.GetNetworkIpsParams) error {
 	log := echolog.GetLogHandler(c, "GetNetworkIps")
 	odb := a.ODB
@@ -620,15 +621,18 @@ func (a *Api) GetNetworkIps(c echo.Context, netId string, params server.GetNetwo
 		}
 		ranges = append(ranges, networkIPRange{begin: addrU32(begin), end: addrU32(end)})
 	} else {
+		// A manager and the team responsible for the network see every
+		// segment, the others those their groups are responsible for.
+		all := IsManager(c) || slices.Contains(UserGroupsFromContext(c), network.TeamResponsible)
 		var groupIDs []int64
-		if !IsManager(c) {
+		if !all {
 			if userID := authUserID(c); userID != nil {
 				if groupIDs, err = odb.UserGroupIDs(ctx, *userID); err != nil {
 					return httpProblem(c, httpInternal(log, "cannot get the groups of the user", err))
 				}
 			}
 		}
-		segments, err := odb.GetNetworkSegmentsOf(ctx, netID, IsManager(c), groupIDs)
+		segments, err := odb.GetNetworkSegmentsOf(ctx, netID, all, groupIDs)
 		if err != nil {
 			return httpProblem(c, httpInternal(log, "cannot read segments", err))
 		}

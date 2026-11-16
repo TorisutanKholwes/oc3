@@ -9555,7 +9555,8 @@ paths:
       description: |
         The addresses of a network, as the historical collector's
         rest_get_network_ips listed them: those of the segments of the network the
-        caller's groups are responsible for (all of them for a manager), or every
+        caller's groups are responsible for (all of them for a manager or a member
+        of the network's responsible team), or every
         address of the network when it has no segment. Each address tells the
         segment it is in and the nodes reporting it. The DNS records of the
         historical collector are not listed. A range over 65536 addresses is
