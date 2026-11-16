@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 )
@@ -423,21 +424,48 @@ func (oDb *DB) DashboardDeleteInstanceNotUpdated(ctx context.Context, objectID, 
 	return nil
 }
 
+// dashboardDeleteBatch bounds the services of a DashboardObjectWithTypeDelete
+// statement.
+const dashboardDeleteBatch = 1000
+
+// DashboardObjectWithTypeDelete deletes the alerts of the (object, type) of l.
+// It deletes by type, `dash_type = ? AND svc_id IN (...)`: a (svc_id,
+// dash_type) IN list of a few thousand pairs made the range optimizer give up
+// the indexes and scan the whole dashboard.
 func (oDb *DB) DashboardObjectWithTypeDelete(ctx context.Context, l ...*DashboardObjectType) error {
 	defer logDuration("dashboardDeleteObject", time.Now())
-	if len(l) == 0 {
-		return nil
-	}
-	placeholders := strings.Repeat("(?,?),", len(l)-1) + "(?,?)"
-
-	query := fmt.Sprintf("DELETE FROM `dashboard` WHERE (`svc_id`, `dash_type`) IN (%s)", placeholders)
-	args := make([]any, 0, 2*len(l))
+	byType := make(map[string][]string)
+	var types []string
 	for _, v := range l {
-		args = append(args, v.ObjectID, v.DashType)
+		if _, ok := byType[v.DashType]; !ok {
+			types = append(types, v.DashType)
+		}
+		if !slices.Contains(byType[v.DashType], v.ObjectID) {
+			byType[v.DashType] = append(byType[v.DashType], v.ObjectID)
+		}
 	}
-
-	_, err := oDb.ExecContext(ctx, query, args...)
-	return err
+	var total int64
+	for _, dashType := range types {
+		ids := byType[dashType]
+		for start := 0; start < len(ids); start += dashboardDeleteBatch {
+			batch := ids[start:min(start+dashboardDeleteBatch, len(ids))]
+			args := make([]any, 0, len(batch)+1)
+			args = append(args, dashType)
+			for _, id := range batch {
+				args = append(args, id)
+			}
+			count, err := oDb.execCountContext(ctx,
+				"DELETE FROM `dashboard` WHERE `dash_type` = ? AND `svc_id` IN ("+Placeholders(len(batch))+")", args...)
+			if err != nil {
+				return fmt.Errorf("dashboardObjectWithTypeDelete %s: %w", dashType, err)
+			}
+			total += count
+		}
+	}
+	if total > 0 {
+		oDb.SetChange("dashboard")
+	}
+	return nil
 }
 
 // DashboardDeleteObjectWithType delete from dashboard where svc_id and dash_type match
