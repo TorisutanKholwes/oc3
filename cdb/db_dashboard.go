@@ -409,48 +409,6 @@ func (oDb *DB) GetServiceAlerts(ctx context.Context, svcID string, p ListParams)
 	return scanRowsToMaps(rows, p.Props, p.TypeHints)
 }
 
-// DashboardInstanceFrozenUpdate update or remove the "service frozen" alerts for instance
-func (oDb *DB) DashboardInstanceFrozenUpdate(ctx context.Context, objectID, nodeID string, objectEnv string, frozen bool) error {
-	defer logDuration("dashboardInstanceFrozenUpdate", time.Now())
-	const (
-		queryThawed = `
-			DELETE FROM dashboard
-			WHERE 
-			    dash_type = 'service frozen' 
-			  AND svc_id = ?
-			  AND node_id = ?
-			`
-		sourceFrozen = `SELECT 'service frozen' AS dash_type, ? AS svc_id, ? AS node_id,
-			1 AS dash_severity, '' AS dash_fmt, '' AS dash_dict,
-			NOW() AS dash_created, NOW() AS dash_updated, ? AS dash_env`
-	)
-	var (
-		err   error
-		count int64
-	)
-	switch frozen {
-	case true:
-		count, err = oDb.upsertAlerts(ctx, alertsUpsert{
-			source:  sourceFrozen,
-			args:    []any{objectID, nodeID, objectEnv},
-			columns: []string{"dash_type", "svc_id", "node_id", "dash_severity", "dash_fmt", "dash_dict", "dash_created", "dash_updated", "dash_env"},
-			update:  []string{"dash_severity = s.dash_severity", "dash_fmt = s.dash_fmt", "dash_dict = s.dash_dict", "dash_updated = s.dash_updated", "dash_env = s.dash_env"},
-		})
-		if err != nil {
-			return fmt.Errorf("update dashboard 'service frozen' for %s@%s: %w", objectID, nodeID, err)
-		}
-	case false:
-		count, err = oDb.execCountContext(ctx, queryThawed, objectID, nodeID)
-		if err != nil {
-			return fmt.Errorf("delete dashboard 'service frozen' for %s@%s: %w", objectID, nodeID, err)
-		}
-	}
-	if count > 0 {
-		oDb.SetChange("dashboard")
-	}
-	return nil
-}
-
 // dashboardDeleteInstanceNotUpdated delete "instance status not updated" alerts.
 func (oDb *DB) DashboardDeleteInstanceNotUpdated(ctx context.Context, objectID, nodeID string) error {
 	defer logDuration("dashboardDeleteInstanceNotUpdated", time.Now())

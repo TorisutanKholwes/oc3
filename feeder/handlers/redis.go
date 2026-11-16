@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -14,6 +16,9 @@ import (
 // Consumers of queueKey must remove the pendingKey element when it pops a queueKey element.
 //
 // It uses HGET O(1) instead of LPOS O(n).
+//
+// The value of the pendingKey element is the unix time value was queued at,
+// which the "slow task" alert reads the wait of the feeds from.
 // LPOS requires redis 6.0.6,
 func (a *Api) pushNotPending(ctx context.Context, log *slog.Logger, pendingKey, queueKey string, value string) error {
 	log.Debug("pushNotPending HGet pendingKey")
@@ -25,7 +30,7 @@ func (a *Api) pushNotPending(ctx context.Context, log *slog.Logger, pendingKey, 
 	case redis.Nil:
 		// not in try push
 		log.Debug("pushNotPending HSet pendingKey")
-		if _, err := a.Redis.HSet(ctx, pendingKey, value, value).Result(); err != nil {
+		if _, err := a.Redis.HSet(ctx, pendingKey, value, strconv.FormatInt(time.Now().Unix(), 10)).Result(); err != nil {
 			return fmt.Errorf("Hset pendingKey: %w", err)
 		}
 		log.Debug("pushNotPending LPush queueKey")

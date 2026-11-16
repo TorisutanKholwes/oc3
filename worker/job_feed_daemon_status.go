@@ -906,8 +906,9 @@ func (d *jobFeedDaemonStatus) dbUpdateInstances(ctx context.Context) error {
 		return fmt.Errorf("dbUpdateInstances DashboardUpdateObjectFlexStartedBatch: %w", err)
 	}
 
+	// The "node frozen" and "service frozen" alerts are written by the
+	// scheduler task alert_frozen, from nodes and svcmon.
 	// TODO:
-	// 	d.oDb.DashboardInstanceFrozenUpdate(ctx, objID, nodeID, obj.Env, iStatus.MonFrozen > 0)
 	//	d.oDb.DashboardDeleteInstanceNotUpdated(ctx, objID, nodeID)
 
 	// TODO add metrics
