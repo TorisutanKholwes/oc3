@@ -126,12 +126,18 @@ func (a *Api) PostUserIdentities(c echo.Context, userId string) error {
 	} else if linked {
 		return JSONProblemf(c, http.StatusConflict, "this identity is already linked to user %d", otherID)
 	}
+	// One identity per account: replacing it takes unlinking it first.
+	if has, err := odb.UserHasIdentity(ctx, targetID); err != nil {
+		return httpProblem(c, httpInternal(log, "cannot check the identities of the user", err))
+	} else if has {
+		return JSONProblemf(c, http.StatusConflict, "user %d already has an identity linked: unlink it first", targetID)
+	}
 
 	log.Info("called", "user_id", targetID, "iss", issuer, "sub", subject)
 	if err := odb.LinkIdentity(ctx, targetID, issuer, subject); err != nil {
 		return httpProblem(c, httpInternal(log, "cannot link the identity", err))
 	}
-	a.logUserIdentityAction(ctx, c, log, "user.identity.link", "linked the identity %(sub)s of %(iss)s to %(email)s",
+	a.logUserIdentityAction(ctx, c, log, "users.identity.link", "linked the identity %(sub)s of %(iss)s to %(email)s",
 		map[string]any{"email": email, "iss": issuer, "sub": subject})
 
 	id, _, _, err := odb.OIDCIdentityID(ctx, issuer, subject)
@@ -185,7 +191,7 @@ func (a *Api) DeleteUserIdentity(c echo.Context, userId string, identityId strin
 	if !found {
 		return JSONProblemf(c, http.StatusNotFound, "identity %d of user %d not found", id, targetID)
 	}
-	a.logUserIdentityAction(ctx, c, log, "user.identity.unlink", "unlinked the identity %(sub)s of %(iss)s from %(email)s",
+	a.logUserIdentityAction(ctx, c, log, "users.identity.unlink", "unlinked the identity %(sub)s of %(iss)s from %(email)s",
 		map[string]any{"email": email, "iss": issuer, "sub": subject})
 	return c.JSON(http.StatusOK, map[string]any{"info": fmt.Sprintf("identity %d unlinked from user %d", id, targetID)})
 }

@@ -114,14 +114,17 @@ func TestUserIdentities(t *testing.T) {
 	c, rec = networksContext(http.MethodPost, `{"subject":"robot"}`, "UserManager")
 	expectCode(t, "linked again", a.PostUserIdentities(c, "1"), rec, http.StatusConflict)
 
+	c, rec = networksContext(http.MethodPost, `{"subject":"robot2"}`, "UserManager")
+	expectCode(t, "a second identity", a.PostUserIdentities(c, "2"), rec, http.StatusConflict)
+
 	c, rec = networksContext(http.MethodPost, `{"subject":"other"}`, "UserManager")
 	expectCode(t, "UserManager on a Manager", a.PostUserIdentities(c, "3"), rec, http.StatusForbidden)
 	c, rec = networksContext(http.MethodPost, `{"subject":"other"}`, "Manager")
-	expectCode(t, "Manager on a Manager", a.PostUserIdentities(c, "boss@example.com"), rec, http.StatusOK)
+	expectCode(t, "Manager on a Manager having one", a.PostUserIdentities(c, "boss@example.com"), rec, http.StatusConflict)
 
 	c, rec = networksContext(http.MethodGet, "", "UserManager")
 	expectCode(t, "list", a.GetUserIdentities(c, "3", server.GetUserIdentitiesParams{}), rec, http.StatusOK)
-	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil || len(list.Data) != 2 {
+	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil || len(list.Data) != 1 || list.Data[0]["subject"] != "m" {
 		t.Fatalf("identities of 3: %s %v", rec.Body.String(), err)
 	}
 	c, rec = networksContext(http.MethodGet, "", "Ops")
@@ -137,7 +140,10 @@ func TestUserIdentities(t *testing.T) {
 	if got := queryString(t, pool, "SELECT COUNT(*) FROM auth_user_identities WHERE subject = 'robot'"); got != "0" {
 		t.Errorf("robot identity left: %s", got)
 	}
-	if got := queryString(t, pool, "SELECT GROUP_CONCAT(log_action ORDER BY id) FROM log"); got != "user.identity.link,user.identity.link,user.identity.unlink" {
+	// unlinked, the account takes another one
+	c, rec = networksContext(http.MethodPost, `{"subject":"robot2"}`, "UserManager")
+	expectCode(t, "replace", a.PostUserIdentities(c, "2"), rec, http.StatusOK)
+	if got := queryString(t, pool, "SELECT GROUP_CONCAT(log_action ORDER BY id) FROM log"); got != "users.identity.link,users.identity.unlink,users.identity.link" {
 		t.Errorf("logs: %s", got)
 	}
 }
