@@ -153,3 +153,51 @@ func (oDb *DB) UserHasIdentity(ctx context.Context, userID int64) (bool, error) 
 		"SELECT EXISTS(SELECT 1 FROM auth_user_identities WHERE user_id = ?)", userID).Scan(&linked)
 	return linked, err
 }
+
+// GetUserOIDCIdentities lists the identities linked to the account userID, by
+// issuer and subject.
+func (oDb *DB) GetUserOIDCIdentities(ctx context.Context, userID int64, p ListParams) ([]map[string]any, error) {
+	return oDb.listQuery(ctx, "getUserOIDCIdentities", "auth_user_identities",
+		[]string{"auth_user_identities.user_id = ?"}, []any{userID},
+		"auth_user_identities.issuer, auth_user_identities.subject", p)
+}
+
+// GetUserOIDCIdentity returns the identity id of the account userID, as a list of
+// one row or none.
+func (oDb *DB) GetUserOIDCIdentity(ctx context.Context, userID, id int64, p ListParams) ([]map[string]any, error) {
+	return oDb.listQuery(ctx, "getUserOIDCIdentity", "auth_user_identities",
+		[]string{"auth_user_identities.user_id = ?", "auth_user_identities.id = ?"}, []any{userID, id},
+		"auth_user_identities.id", p)
+}
+
+// OIDCIdentityID returns the id of the link of the identity (issuer, subject)
+// and the account it is linked to, if any.
+func (oDb *DB) OIDCIdentityID(ctx context.Context, issuer, subject string) (id, userID int64, found bool, err error) {
+	err = oDb.DB.QueryRowContext(ctx,
+		"SELECT id, user_id FROM auth_user_identities WHERE issuer = ? AND subject = ?", issuer, subject).Scan(&id, &userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, 0, false, nil
+	}
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("OIDCIdentityID: %w", err)
+	}
+	return id, userID, true, nil
+}
+
+// UnlinkOIDCIdentity deletes the link id of the account userID, and returns its
+// issuer and subject. found is false when the account has no such link.
+func (oDb *DB) UnlinkOIDCIdentity(ctx context.Context, userID, id int64) (issuer, subject string, found bool, err error) {
+	err = oDb.DB.QueryRowContext(ctx,
+		"SELECT issuer, subject FROM auth_user_identities WHERE id = ? AND user_id = ?", id, userID).Scan(&issuer, &subject)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, fmt.Errorf("UnlinkOIDCIdentity: %w", err)
+	}
+	if _, err := oDb.ExecContext(ctx, "DELETE FROM auth_user_identities WHERE id = ? AND user_id = ?", id, userID); err != nil {
+		return "", "", false, fmt.Errorf("UnlinkOIDCIdentity: %w", err)
+	}
+	oDb.SetChange("auth_user_identities")
+	return issuer, subject, true, nil
+}

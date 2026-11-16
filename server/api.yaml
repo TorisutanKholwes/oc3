@@ -16961,6 +16961,157 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /users/{user_id}/identities:
+    get:
+      operationId: GetUserIdentities
+      description: |
+        The OpenID Connect identities linked to an account: an access token of one
+        of them signs in as the account. Requires the UserManager privilege, but for
+        one's own account.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: |
+            User identifier: auth_user.id, the user email when it contains an
+            "@", or "self" for the authenticated user.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserIdentityListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostUserIdentities
+      description: |
+        Link an OpenID Connect identity to an account, for an automation whose
+        account never signs in through the browser, where the link is otherwise
+        made: the access tokens of the identity then sign in as the account.
+        `subject` is the `sub` claim of its tokens; `issuer` defaults to, and must
+        be, the issuer of the collector's provider. Requires the UserManager
+        privilege; only a Manager links an identity to a Manager. An identity
+        already linked is refused with a 409. The link is logged.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: |
+            User identifier: auth_user.id, the user email when it contains an
+            "@", or "self" for the authenticated user.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subject
+              properties:
+                subject:
+                  type: string
+                  description: The sub claim of the identity's tokens
+                issuer:
+                  type: string
+                  description: The iss claim of the identity's tokens
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserIdentityListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /users/{user_id}/identities/{identity_id}:
+    delete:
+      operationId: DeleteUserIdentity
+      description: |
+        Unlink an OpenID Connect identity from an account: its access tokens no
+        longer sign in, and its next browser sign-in links it again by email when
+        an account has the email. Requires the UserManager privilege; only a
+        Manager unlinks an identity of a Manager. The unlink is logged.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: |
+            User identifier: auth_user.id, the user email when it contains an
+            "@", or "self" for the authenticated user.
+          schema:
+            type: string
+        - in: path
+          name: identity_id
+          required: true
+          description: Record id of the link
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /users/{user_id}/nodes:
     get:
       operationId: GetUserNodes
@@ -32251,6 +32402,38 @@ components:
               count:
                 type: integer
                 format: int64
+
+    UserIdentityRow:
+      type: object
+      description: An OpenID Connect identity linked to an account.
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        issuer:
+          type: string
+        subject:
+          type: string
+        created:
+          type: string
+        last_login:
+          type: string
+          description: Last browser sign-in through the identity
+
+    UserIdentityListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserIdentityRow'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+        info:
+          type: string
 
     InfoResponse:
       type: object
