@@ -1733,6 +1733,24 @@ func (e PostNetworkSegmentsJSONBodySegType) Valid() bool {
 	}
 }
 
+// Defines values for PostNetworkSegmentJSONBodySegType.
+const (
+	Dynamic PostNetworkSegmentJSONBodySegType = "dynamic"
+	Static  PostNetworkSegmentJSONBodySegType = "static"
+)
+
+// Valid indicates whether the value is a known member of the PostNetworkSegmentJSONBodySegType enum.
+func (e PostNetworkSegmentJSONBodySegType) Valid() bool {
+	switch e {
+	case Dynamic:
+		return true
+	case Static:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PostNodesJSONBodyActionType.
 const (
 	PostNodesJSONBodyActionTypePull PostNodesJSONBodyActionType = "pull"
@@ -4969,6 +4987,28 @@ type ModulesetsModuleRow struct {
 	TeamsResponsible *string `json:"teams_responsible,omitempty"`
 }
 
+// NetworkIpListResponse defines model for NetworkIpListResponse.
+type NetworkIpListResponse struct {
+	Data []NetworkIpRow `json:"data"`
+	Meta *ListMeta      `json:"meta,omitempty"`
+}
+
+// NetworkIpNode A node reporting an address.
+type NetworkIpNode struct {
+	NodeId   string `json:"node_id"`
+	Nodename string `json:"nodename"`
+}
+
+// NetworkIpRow An address of a network, with its segment and the nodes reporting it.
+type NetworkIpRow struct {
+	Ip    string          `json:"ip"`
+	Nodes []NetworkIpNode `json:"nodes"`
+	SegId *int            `json:"seg_id,omitempty"`
+
+	// SegType static or dynamic, empty outside segments
+	SegType *string `json:"seg_type,omitempty"`
+}
+
 // NetworkListResponse defines model for NetworkListResponse.
 type NetworkListResponse struct {
 	Data []NetworkRow `json:"data"`
@@ -4998,6 +5038,25 @@ type NetworkRow struct {
 type NetworkSegmentListResponse struct {
 	Data []NetworkSegmentRow `json:"data"`
 	Info *string             `json:"info,omitempty"`
+	Meta *ListMeta           `json:"meta,omitempty"`
+}
+
+// NetworkSegmentResponsibleListResponse defines model for NetworkSegmentResponsibleListResponse.
+type NetworkSegmentResponsibleListResponse struct {
+	Data []NetworkSegmentResponsibleRow `json:"data"`
+	Info *string                        `json:"info,omitempty"`
+	Meta *ListMeta                      `json:"meta,omitempty"`
+}
+
+// NetworkSegmentResponsibleRow A group responsible for a segment of a network.
+type NetworkSegmentResponsibleRow struct {
+	Description *string `json:"description,omitempty"`
+	GroupId     *int    `json:"group_id,omitempty"`
+	Id          *int    `json:"id,omitempty"`
+
+	// Role Name of the group
+	Role  *string `json:"role,omitempty"`
+	SegId *int    `json:"seg_id,omitempty"`
 }
 
 // NetworkSegmentRow An address range of a network, delegated to its responsible groups.
@@ -13000,6 +13059,154 @@ type PostNetworksJSONBody struct {
 	TeamResponsible *string `json:"team_responsible,omitempty"`
 }
 
+// GetNetworkParams defines parameters for GetNetwork.
+type GetNetworkParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// PostNetworkJSONBody defines parameters for PostNetwork.
+type PostNetworkJSONBody struct {
+	Comment *string `json:"comment,omitempty"`
+
+	// Gateway IPv4 address inside the network, empty to unset
+	Gateway *string `json:"gateway,omitempty"`
+	Name    *string `json:"name,omitempty"`
+
+	// Netmask Prefix length
+	Netmask *int `json:"netmask,omitempty"`
+
+	// Network IPv4 network address, for example 192.168.10.0
+	Network *string `json:"network,omitempty"`
+
+	// Prio Priority among overlapping networks
+	Prio *int `json:"prio,omitempty"`
+
+	// Pvid VLAN id
+	Pvid *int `json:"pvid,omitempty"`
+
+	// TeamResponsible Organisational group responsible for the network
+	TeamResponsible *string `json:"team_responsible,omitempty"`
+}
+
+// GetNetworkIpsParams defines parameters for GetNetworkIps.
+type GetNetworkIpsParams struct {
+	// Free Only the addresses no node reports
+	Free *bool `form:"free,omitempty" json:"free,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// GetNetworkSegmentsParams defines parameters for GetNetworkSegments.
+type GetNetworkSegmentsParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
 // PostNetworkSegmentsJSONBody defines parameters for PostNetworkSegments.
 type PostNetworkSegmentsJSONBody struct {
 	// SegBegin First IPv4 address of the segment
@@ -13014,6 +13221,131 @@ type PostNetworkSegmentsJSONBody struct {
 
 // PostNetworkSegmentsJSONBodySegType defines parameters for PostNetworkSegments.
 type PostNetworkSegmentsJSONBodySegType string
+
+// GetNetworkSegmentParams defines parameters for GetNetworkSegment.
+type GetNetworkSegmentParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// PostNetworkSegmentJSONBody defines parameters for PostNetworkSegment.
+type PostNetworkSegmentJSONBody struct {
+	// SegBegin First IPv4 address of the segment
+	SegBegin *string `json:"seg_begin,omitempty"`
+
+	// SegEnd Last IPv4 address of the segment
+	SegEnd  *string                            `json:"seg_end,omitempty"`
+	SegType *PostNetworkSegmentJSONBodySegType `json:"seg_type,omitempty"`
+}
+
+// PostNetworkSegmentJSONBodySegType defines parameters for PostNetworkSegment.
+type PostNetworkSegmentJSONBodySegType string
+
+// GetNetworkSegmentResponsiblesParams defines parameters for GetNetworkSegmentResponsibles.
+type GetNetworkSegmentResponsiblesParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
 
 // DeleteNodesJSONBody defines parameters for DeleteNodes.
 type DeleteNodesJSONBody struct {
@@ -17698,8 +18030,14 @@ type PostMetricsPublicationsJSONRequestBody PostMetricsPublicationsJSONBody
 // PostNetworksJSONRequestBody defines body for PostNetworks for application/json ContentType.
 type PostNetworksJSONRequestBody PostNetworksJSONBody
 
+// PostNetworkJSONRequestBody defines body for PostNetwork for application/json ContentType.
+type PostNetworkJSONRequestBody PostNetworkJSONBody
+
 // PostNetworkSegmentsJSONRequestBody defines body for PostNetworkSegments for application/json ContentType.
 type PostNetworkSegmentsJSONRequestBody PostNetworkSegmentsJSONBody
+
+// PostNetworkSegmentJSONRequestBody defines body for PostNetworkSegment for application/json ContentType.
+type PostNetworkSegmentJSONRequestBody PostNetworkSegmentJSONBody
 
 // DeleteNodesJSONRequestBody defines body for DeleteNodes for application/json ContentType.
 type DeleteNodesJSONRequestBody DeleteNodesJSONBody
