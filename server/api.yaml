@@ -16421,6 +16421,60 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /topology:
+    get:
+      operationId: GetTopology
+      description: |
+        The topology of nodes and services, as the historical collector drew it:
+        a graph of the objects of the layers asked for, and of what relates them.
+        It starts from the nodes, services and applications given, those of the
+        applications the caller's groups are responsible for unless a manager,
+        then takes the services of those nodes and the nodes of those services.
+        More than 1000 nodes and services are refused with a 400.
+      parameters:
+        - in: query
+          name: node_ids
+          description: Comma-separated node ids to start from
+          schema:
+            type: string
+        - in: query
+          name: svc_ids
+          description: Comma-separated service ids to start from
+          schema:
+            type: string
+        - in: query
+          name: app_ids
+          description: Comma-separated application ids to start from
+          schema:
+            type: string
+        - in: query
+          name: display
+          required: true
+          description: |
+            Comma-separated layers to show: nodes, services, apps, envs,
+            resources, disks, arrays, san, and the locations hvs, hvpools,
+            hvvdcs, enclosures, racks, rooms, buildings, cities, countries.
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topology'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /users:
     get:
       operationId: GetUsers
@@ -32435,6 +32489,65 @@ components:
           $ref: '#/components/schemas/ListMeta'
         info:
           type: string
+
+    Topology:
+      type: object
+      description: A graph of nodes, services and what relates them.
+      required: [vertices, edges]
+      properties:
+        vertices:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyVertex'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyEdge'
+
+    TopologyVertex:
+      type: object
+      required: [id, kind, layer, label]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          description: |
+            node, service, app, env, disk, array, sansw, a location layer, or
+            for a resource its type family (ip, fs, disk, container.docker, app...).
+        layer:
+          type: string
+          enum: [nodes, services, apps, envs, resources, disks, arrays, san, hvs, hvpools, hvvdcs, enclosures, racks, rooms, buildings, cities, countries]
+        label:
+          type: string
+        detail:
+          type: string
+          description: Operating system and model of a node, disks of a disk group.
+        status:
+          type: string
+          description: Availability of a service; undef when not updated for 15 minutes.
+        node_id:
+          type: string
+        svc_id:
+          type: string
+        count:
+          type: integer
+          description: Resources of a resource type, disks of a disk group.
+
+    TopologyEdge:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        status:
+          type: string
+          description: Availability of the instance or the resource the edge stands for.
+        label:
+          type: string
+          description: A count, or the links of a SAN path by speed.
 
     InfoResponse:
       type: object

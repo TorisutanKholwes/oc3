@@ -1280,6 +1280,69 @@ func (e SysreportPurgeFileKind) Valid() bool {
 	}
 }
 
+// Defines values for TopologyVertexLayer.
+const (
+	Apps       TopologyVertexLayer = "apps"
+	Arrays     TopologyVertexLayer = "arrays"
+	Buildings  TopologyVertexLayer = "buildings"
+	Cities     TopologyVertexLayer = "cities"
+	Countries  TopologyVertexLayer = "countries"
+	Disks      TopologyVertexLayer = "disks"
+	Enclosures TopologyVertexLayer = "enclosures"
+	Envs       TopologyVertexLayer = "envs"
+	Hvpools    TopologyVertexLayer = "hvpools"
+	Hvs        TopologyVertexLayer = "hvs"
+	Hvvdcs     TopologyVertexLayer = "hvvdcs"
+	Nodes      TopologyVertexLayer = "nodes"
+	Racks      TopologyVertexLayer = "racks"
+	Resources  TopologyVertexLayer = "resources"
+	Rooms      TopologyVertexLayer = "rooms"
+	San        TopologyVertexLayer = "san"
+	Services   TopologyVertexLayer = "services"
+)
+
+// Valid indicates whether the value is a known member of the TopologyVertexLayer enum.
+func (e TopologyVertexLayer) Valid() bool {
+	switch e {
+	case Apps:
+		return true
+	case Arrays:
+		return true
+	case Buildings:
+		return true
+	case Cities:
+		return true
+	case Countries:
+		return true
+	case Disks:
+		return true
+	case Enclosures:
+		return true
+	case Envs:
+		return true
+	case Hvpools:
+		return true
+	case Hvs:
+		return true
+	case Hvvdcs:
+		return true
+	case Nodes:
+		return true
+	case Racks:
+		return true
+	case Resources:
+		return true
+	case Rooms:
+		return true
+	case San:
+		return true
+	case Services:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserNotificationLevel.
 const (
 	UserNotificationLevelCritical UserNotificationLevel = "critical"
@@ -7122,6 +7185,48 @@ type TagAgentCreate struct {
 	Exclude *string `json:"exclude,omitempty"`
 	Name    string  `json:"name"`
 }
+
+// Topology A graph of nodes, services and what relates them.
+type Topology struct {
+	Edges    []TopologyEdge   `json:"edges"`
+	Vertices []TopologyVertex `json:"vertices"`
+}
+
+// TopologyEdge defines model for TopologyEdge.
+type TopologyEdge struct {
+	From string `json:"from"`
+
+	// Label A count, or the links of a SAN path by speed.
+	Label *string `json:"label,omitempty"`
+
+	// Status Availability of the instance or the resource the edge stands for.
+	Status *string `json:"status,omitempty"`
+	To     string  `json:"to"`
+}
+
+// TopologyVertex defines model for TopologyVertex.
+type TopologyVertex struct {
+	// Count Resources of a resource type, disks of a disk group.
+	Count *int `json:"count,omitempty"`
+
+	// Detail Operating system and model of a node, disks of a disk group.
+	Detail *string `json:"detail,omitempty"`
+	Id     string  `json:"id"`
+
+	// Kind node, service, app, env, disk, array, sansw, a location layer, or
+	// for a resource its type family (ip, fs, disk, container.docker, app...).
+	Kind   string              `json:"kind"`
+	Label  string              `json:"label"`
+	Layer  TopologyVertexLayer `json:"layer"`
+	NodeId *string             `json:"node_id,omitempty"`
+
+	// Status Availability of a service; undef when not updated for 15 minutes.
+	Status *string `json:"status,omitempty"`
+	SvcId  *string `json:"svc_id,omitempty"`
+}
+
+// TopologyVertexLayer defines model for TopologyVertex.Layer.
+type TopologyVertexLayer string
 
 // UserIdentityListResponse defines model for UserIdentityListResponse.
 type UserIdentityListResponse struct {
@@ -17426,6 +17531,23 @@ type GetTagServicesParams struct {
 // PostTagServiceJSONBody defines parameters for PostTagService.
 type PostTagServiceJSONBody struct {
 	TagAttachData *string `json:"tag_attach_data,omitempty"`
+}
+
+// GetTopologyParams defines parameters for GetTopology.
+type GetTopologyParams struct {
+	// NodeIds Comma-separated node ids to start from
+	NodeIds *string `form:"node_ids,omitempty" json:"node_ids,omitempty"`
+
+	// SvcIds Comma-separated service ids to start from
+	SvcIds *string `form:"svc_ids,omitempty" json:"svc_ids,omitempty"`
+
+	// AppIds Comma-separated application ids to start from
+	AppIds *string `form:"app_ids,omitempty" json:"app_ids,omitempty"`
+
+	// Display Comma-separated layers to show: nodes, services, apps, envs,
+	// resources, disks, arrays, san, and the locations hvs, hvpools,
+	// hvvdcs, enclosures, racks, rooms, buildings, cities, countries.
+	Display string `form:"display" json:"display"`
 }
 
 // GetUsersParams defines parameters for GetUsers.
