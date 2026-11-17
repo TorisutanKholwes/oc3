@@ -15410,6 +15410,52 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /services/{svc_id}/startup:
+    get:
+      operationId: GetServiceStartup
+      description: |
+        The startup graph of a service on one of its nodes, as the historical
+        collector's startup tab drew it: its resources in the order the agent
+        starts them, read from the service configuration, with the state the
+        node last reported. A service whose configuration was never received
+        has its nodes and no vertices. The services of the applications the
+        caller's groups are responsible for only, unless a manager.
+      parameters:
+        - in: path
+          name: svc_id
+          required: true
+          description: Service identifier (svc_id UUID or svcname)
+          schema:
+            type: string
+        - in: query
+          name: node_id
+          description: The node to draw the startup on, the first of the service by name if absent
+          schema:
+            type: string
+        - in: query
+          name: show_disabled
+          description: Draw the disabled resources too, which the agent skips
+          schema:
+            type: boolean
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceStartup'
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /services/{svc_id}/resinfo:
     get:
       operationId: GetServiceResinfo
@@ -32533,6 +32579,108 @@ components:
         count:
           type: integer
           description: Resources of a resource type, disks of a disk group.
+
+    ServiceStartup:
+      type: object
+      description: The startup graph of a service on a node.
+      required: [svc_id, svcname, nodes, vertices, edges]
+      properties:
+        svc_id:
+          type: string
+        svcname:
+          type: string
+        node_id:
+          type: string
+          description: The node drawn, absent for a service with no instance.
+        nodename:
+          type: string
+        nodes:
+          type: array
+          description: The nodes of the service, by name.
+          items:
+            $ref: '#/components/schemas/ServiceStartupNode'
+        vertices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceStartupVertex'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceStartupEdge'
+
+    ServiceStartupNode:
+      type: object
+      required: [node_id, nodename]
+      properties:
+        node_id:
+          type: string
+        nodename:
+          type: string
+
+    ServiceStartupVertex:
+      type: object
+      required: [id, kind, label]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [service, node, subset, resource, trigger, encap]
+        label:
+          type: string
+        rid:
+          type: string
+          description: The resource; that of a trigger; the container of an encap node.
+        family:
+          type: string
+          description: Driver group of a resource, ip, volume, disk, fs, share, container, app.
+        type:
+          type: string
+          description: Driver of a resource, docker, netns, flag...
+        desc:
+          type: string
+          description: Description of a resource the agent reports; command of a trigger.
+        status:
+          type: string
+          description: State of a resource the agent last reported, absent when never reported.
+        trigger:
+          type: string
+          description: Hook of a trigger, blocking_pre_start, pre_start, blocking_post_start, post_start.
+        parallel:
+          type: boolean
+          description: A subset whose resources start in parallel.
+        disabled:
+          type: boolean
+        optional:
+          type: boolean
+        monitor:
+          type: boolean
+        standby:
+          type: boolean
+        encap:
+          type: boolean
+        node:
+          type: string
+          description: The encap node a resource runs in.
+
+    ServiceStartupEdge:
+      type: object
+      required: [from, to, kind]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        kind:
+          type: string
+          enum: [sequence, requires]
+          description: |
+            sequence, from a step to a step that follows it; requires, from a
+            resource to one whose start waits for it (start_requires), or from
+            a container to the encap node it holds.
+        label:
+          type: string
+          description: The states a requirement waits for.
 
     TopologyEdge:
       type: object

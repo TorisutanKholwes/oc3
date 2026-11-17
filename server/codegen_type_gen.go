@@ -1166,6 +1166,54 @@ func (e ServiceActionAckRequestAck) Valid() bool {
 	}
 }
 
+// Defines values for ServiceStartupEdgeKind.
+const (
+	Requires ServiceStartupEdgeKind = "requires"
+	Sequence ServiceStartupEdgeKind = "sequence"
+)
+
+// Valid indicates whether the value is a known member of the ServiceStartupEdgeKind enum.
+func (e ServiceStartupEdgeKind) Valid() bool {
+	switch e {
+	case Requires:
+		return true
+	case Sequence:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ServiceStartupVertexKind.
+const (
+	ServiceStartupVertexKindEncap    ServiceStartupVertexKind = "encap"
+	ServiceStartupVertexKindNode     ServiceStartupVertexKind = "node"
+	ServiceStartupVertexKindResource ServiceStartupVertexKind = "resource"
+	ServiceStartupVertexKindService  ServiceStartupVertexKind = "service"
+	ServiceStartupVertexKindSubset   ServiceStartupVertexKind = "subset"
+	ServiceStartupVertexKindTrigger  ServiceStartupVertexKind = "trigger"
+)
+
+// Valid indicates whether the value is a known member of the ServiceStartupVertexKind enum.
+func (e ServiceStartupVertexKind) Valid() bool {
+	switch e {
+	case ServiceStartupVertexKindEncap:
+		return true
+	case ServiceStartupVertexKindNode:
+		return true
+	case ServiceStartupVertexKindResource:
+		return true
+	case ServiceStartupVertexKindService:
+		return true
+	case ServiceStartupVertexKindSubset:
+		return true
+	case ServiceStartupVertexKindTrigger:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SysreportEntryKind.
 const (
 	SysreportEntryKindCommand SysreportEntryKind = "command"
@@ -1498,19 +1546,19 @@ func (e PutComplianceRulesetVariableJSONBodyAction) Valid() bool {
 
 // Defines values for GetComplianceStatusSummaryParamsBy.
 const (
-	GetComplianceStatusSummaryParamsByModule  GetComplianceStatusSummaryParamsBy = "module"
-	GetComplianceStatusSummaryParamsByNode    GetComplianceStatusSummaryParamsBy = "node"
-	GetComplianceStatusSummaryParamsByService GetComplianceStatusSummaryParamsBy = "service"
+	Module  GetComplianceStatusSummaryParamsBy = "module"
+	Node    GetComplianceStatusSummaryParamsBy = "node"
+	Service GetComplianceStatusSummaryParamsBy = "service"
 )
 
 // Valid indicates whether the value is a known member of the GetComplianceStatusSummaryParamsBy enum.
 func (e GetComplianceStatusSummaryParamsBy) Valid() bool {
 	switch e {
-	case GetComplianceStatusSummaryParamsByModule:
+	case Module:
 		return true
-	case GetComplianceStatusSummaryParamsByNode:
+	case Node:
 		return true
-	case GetComplianceStatusSummaryParamsByService:
+	case Service:
 		return true
 	default:
 		return false
@@ -6773,6 +6821,84 @@ type ServiceRow struct {
 	Svcname          *string  `json:"svcname,omitempty"`
 	Updated          *string  `json:"updated,omitempty"`
 }
+
+// ServiceStartup The startup graph of a service on a node.
+type ServiceStartup struct {
+	Edges []ServiceStartupEdge `json:"edges"`
+
+	// NodeId The node drawn, absent for a service with no instance.
+	NodeId   *string `json:"node_id,omitempty"`
+	Nodename *string `json:"nodename,omitempty"`
+
+	// Nodes The nodes of the service, by name.
+	Nodes    []ServiceStartupNode   `json:"nodes"`
+	SvcId    string                 `json:"svc_id"`
+	Svcname  string                 `json:"svcname"`
+	Vertices []ServiceStartupVertex `json:"vertices"`
+}
+
+// ServiceStartupEdge defines model for ServiceStartupEdge.
+type ServiceStartupEdge struct {
+	From string `json:"from"`
+
+	// Kind sequence, from a step to a step that follows it; requires, from a
+	// resource to one whose start waits for it (start_requires), or from
+	// a container to the encap node it holds.
+	Kind ServiceStartupEdgeKind `json:"kind"`
+
+	// Label The states a requirement waits for.
+	Label *string `json:"label,omitempty"`
+	To    string  `json:"to"`
+}
+
+// ServiceStartupEdgeKind sequence, from a step to a step that follows it; requires, from a
+// resource to one whose start waits for it (start_requires), or from
+// a container to the encap node it holds.
+type ServiceStartupEdgeKind string
+
+// ServiceStartupNode defines model for ServiceStartupNode.
+type ServiceStartupNode struct {
+	NodeId   string `json:"node_id"`
+	Nodename string `json:"nodename"`
+}
+
+// ServiceStartupVertex defines model for ServiceStartupVertex.
+type ServiceStartupVertex struct {
+	// Desc Description of a resource the agent reports; command of a trigger.
+	Desc     *string `json:"desc,omitempty"`
+	Disabled *bool   `json:"disabled,omitempty"`
+	Encap    *bool   `json:"encap,omitempty"`
+
+	// Family Driver group of a resource, ip, volume, disk, fs, share, container, app.
+	Family  *string                  `json:"family,omitempty"`
+	Id      string                   `json:"id"`
+	Kind    ServiceStartupVertexKind `json:"kind"`
+	Label   string                   `json:"label"`
+	Monitor *bool                    `json:"monitor,omitempty"`
+
+	// Node The encap node a resource runs in.
+	Node     *string `json:"node,omitempty"`
+	Optional *bool   `json:"optional,omitempty"`
+
+	// Parallel A subset whose resources start in parallel.
+	Parallel *bool `json:"parallel,omitempty"`
+
+	// Rid The resource; that of a trigger; the container of an encap node.
+	Rid     *string `json:"rid,omitempty"`
+	Standby *bool   `json:"standby,omitempty"`
+
+	// Status State of a resource the agent last reported, absent when never reported.
+	Status *string `json:"status,omitempty"`
+
+	// Trigger Hook of a trigger, blocking_pre_start, pre_start, blocking_post_start, post_start.
+	Trigger *string `json:"trigger,omitempty"`
+
+	// Type Driver of a resource, docker, netns, flag...
+	Type *string `json:"type,omitempty"`
+}
+
+// ServiceStartupVertexKind defines model for ServiceStartupVertex.Kind.
+type ServiceStartupVertexKind string
 
 // ServiceStatusPeriod defines model for ServiceStatusPeriod.
 type ServiceStatusPeriod struct {
@@ -16736,6 +16862,15 @@ type GetServiceResourceLogsParams struct {
 
 	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
 	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// GetServiceStartupParams defines parameters for GetServiceStartup.
+type GetServiceStartupParams struct {
+	// NodeId The node to draw the startup on, the first of the service by name if absent
+	NodeId *string `form:"node_id,omitempty" json:"node_id,omitempty"`
+
+	// ShowDisabled Draw the disabled resources too, which the agent skips
+	ShowDisabled *bool `form:"show_disabled,omitempty" json:"show_disabled,omitempty"`
 }
 
 // GetServiceStatusLogParams defines parameters for GetServiceStatusLog.
