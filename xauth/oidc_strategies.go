@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -254,6 +255,9 @@ func (b *oidcBearer) Authenticate(ctx context.Context, r *http.Request) (auth.In
 	)
 	err = b.db.QueryRowContext(ctx, queryUserByIdentity, token.issuer, token.subject).Scan(&userID, &email, &key)
 	if errors.Is(err, sql.ErrNoRows) {
+		// Its issuer and subject are what an administrator links to an account,
+		// POST /users/{user_id}/identities.
+		slog.Warn("bearer token of an identity unknown to the collector refused", "iss", token.issuer, "sub", token.subject)
 		return nil, errors.New("bearer token of an identity unknown to the collector")
 	}
 	if err != nil {

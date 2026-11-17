@@ -338,6 +338,10 @@ func (d *jobFeedSystem) groups(ctx context.Context) error {
 		d.oDb.Session.SetChanges(tableName)
 	}
 
+	if err := d.oDb.DashboardUpdateNodeDuplicateIDs(ctx, nodeID, "gid", now); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -384,6 +388,10 @@ func (d *jobFeedSystem) users(ctx context.Context) error {
 		return err
 	} else if count > 0 {
 		d.oDb.Session.SetChanges(tableName)
+	}
+
+	if err := d.oDb.DashboardUpdateNodeDuplicateIDs(ctx, nodeID, "uid", now); err != nil {
+		return err
 	}
 
 	return nil

@@ -58,7 +58,12 @@ func openDatabase(section string, vars map[string]string) (*sql.DB, error) {
 		AllowNativePasswords: true,
 		ParseTime:            true,
 		Loc:                  time.Local,
-		Params:               vars,
+		// Let the driver substitute the query arguments client side: without
+		// it every query with arguments costs a server side Prepare and Close
+		// round trip (~15% of the DB time of the agent-sim 1000 nodes run).
+		// The driver falls back to a prepared statement when it cannot.
+		InterpolateParams: true,
+		Params:            vars,
 	}
 	var (
 		maxOpenConns    = viper.GetInt(dbKey(section, "max_open_conns"))

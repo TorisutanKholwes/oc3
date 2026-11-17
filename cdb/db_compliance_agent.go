@@ -316,7 +316,7 @@ func (oDb *DB) compAgentAssetRulesets(ctx context.Context, t compAgentTarget, rs
 	}
 	add("osvc_service", vars)
 	blacklist := []string{"id", "mon_containerpath", "mon_vmem", "mon_vcpu"}
-	const fresh = "svcmon.mon_updated > NOW() - INTERVAL 15 MINUTE"
+	fresh := SvcmonUpdatedSQL("svcmon") + " > NOW() - INTERVAL 15 MINUTE"
 	if t.slave {
 		vars, err = oDb.compAgentRow(ctx, "svcmon", blacklist, `SELECT svcmon.* FROM svcmon
 			JOIN nodes ON svcmon.mon_vmname = nodes.nodename

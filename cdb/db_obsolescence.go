@@ -236,54 +236,70 @@ func (oDb *DB) StatObsolescenceOS(ctx context.Context) error {
 	return nil
 }
 
-// PurgeAlertsObsWithout deletes dashboard "obsolescence date not set" alerts if
-// the node model or operating system is no longer the one referenced in the alert.
+// PurgeAlertsObsWithout writes the "<hardware|os> obsolescence <warning|alert>
+// date not set" alerts of the nodes whose model or operating system has no
+// such date, as the cron_dash_obs_without() of the historical collector, and
+// deletes the others: date set since, node model or operating system changed.
+// The virtual and cluster models are left out, as for the other obsolescence
+// alerts.
 func (oDb *DB) PurgeAlertsObsWithout(ctx context.Context) error {
-	query := `DELETE d FROM dashboard d
-		  JOIN nodes n ON d.node_id = n.node_id
-		  WHERE
-		    d.dash_type IN ("hardware obsolescence alert date not set", "hardware obsolescence warning date not set") AND
-		    d.dash_dict != JSON_OBJECT('o', n.model)
-	         `
-	if _, err := oDb.ExecContext(ctx, query); err != nil {
-		return fmt.Errorf("update obsolescence alerts failed: %w", err)
+	// One instant for the alerts written and the purge of the others.
+	now, err := oDb.databaseNow(ctx)
+	if err != nil {
+		return err
 	}
-	query = `DELETE d FROM dashboard d
-                 JOIN nodes n ON d.node_id=n.node_id
-                 WHERE
-		   d.dash_type IN ("os obsolescence alert date not set", "os obsolescence warning date not set") AND
-                   d.dash_dict != JSON_OBJECT('o', CONCAT(n.os_name, " ", n.os_vendor, " ", n.os_release))
-	        `
-	if _, err := oDb.ExecContext(ctx, query); err != nil {
-		return fmt.Errorf("update obsolescence alerts failed: %w", err)
+	dashTypes := make([]any, 0, 4)
+	var total int64
+	for _, obsType := range []string{"hw", "os"} {
+		typeLabel, nodeCol := "os", "n.os_concat"
+		if obsType == "hw" {
+			typeLabel, nodeCol = "hardware", "n.model"
+		}
+		for _, kind := range []string{"warn", "alert"} {
+			kindLabel := kind
+			if kind == "warn" {
+				kindLabel = "warning"
+			}
+			dashType := fmt.Sprintf("%s obsolescence %s date not set", typeLabel, kindLabel)
+			dashTypes = append(dashTypes, dashType)
+			source := fmt.Sprintf(`SELECT
+				? AS dash_type,
+				n.node_id,
+				0 AS dash_severity,
+				? AS dash_fmt,
+				JSON_OBJECT('o', o.obs_name) AS dash_dict,
+				MD5(JSON_OBJECT('o', o.obs_name)) AS dash_dict_md5,
+				? AS dash_created,
+				? AS dash_updated,
+				n.node_env AS dash_env
+			FROM obsolescence o
+			JOIN nodes n ON o.obs_name = %[1]s
+			WHERE
+				o.obs_type = ? AND
+				o.obs_name NOT LIKE "%%virtual%%" AND
+				o.obs_name NOT LIKE "%%virtuel%%" AND
+				o.obs_name NOT LIKE "%%cluster%%" AND
+				(o.obs_%[2]s_date IS NULL OR o.obs_%[2]s_date = "0000-00-00 00:00:00")`, nodeCol, kind)
+			count, err := oDb.upsertAlerts(ctx, alertsUpsert{
+				source:  source,
+				args:    []any{dashType, obsType + ": %(o)s", now, now, obsType},
+				columns: []string{"dash_type", "node_id", "dash_severity", "dash_fmt", "dash_dict", "dash_dict_md5", "dash_created", "dash_updated", "dash_env"},
+				update: []string{"dash_dict = s.dash_dict", "dash_dict_md5 = s.dash_dict_md5",
+					"dash_env = s.dash_env", "dash_updated = s.dash_updated"},
+			})
+			if err != nil {
+				return fmt.Errorf("dashboard %s: %w", dashType, err)
+			}
+			total += count
+		}
 	}
-	query = `DELETE FROM dashboard
-                 WHERE
-		   dash_type IN ("hardware obsolescence alert date not set", "hardware obsolescence warning date not set") AND
-                   dash_dict IN (
-                     SELECT JSON_OBJECT('o', obs_name)
-                     FROM obsolescence
-                     WHERE
-                       obs_warn_date IS NOT NULL AND
-                       obs_type = "hw"
-                     )
-	        `
-	if _, err := oDb.ExecContext(ctx, query); err != nil {
-		return fmt.Errorf("update obsolescence alerts failed: %w", err)
+	count, err := oDb.execCountContext(ctx, "DELETE FROM dashboard WHERE dash_type IN (?, ?, ?, ?) AND (dash_updated < ? OR dash_updated IS NULL)",
+		append(dashTypes, now)...)
+	if err != nil {
+		return fmt.Errorf("dashboard obsolescence date not set: purge: %w", err)
 	}
-	query = `DELETE from dashboard
-                 WHERE
-		   dash_type IN ("hardware os alert date not set", "os obsolescence warning date not set") AND
-                   dash_dict IN (
-                     SELECT JSON_OBJECT('o', obs_name)
-                     FROM obsolescence
-                     WHERE
-                       obs_warn_date IS NOT NULL AND
-                       obs_type = "os"
-                     )
-	       `
-	if _, err := oDb.ExecContext(ctx, query); err != nil {
-		return fmt.Errorf("update obsolescence alerts failed: %w", err)
+	if total+count > 0 {
+		oDb.SetChange("dashboard")
 	}
 	return nil
 }

@@ -60,7 +60,6 @@ func (d *jobFeedDaemonPing) Operations() []operation {
 		{name: "getData", do: d.getData},
 		{name: "dbFetchNodes", do: d.dbFetchNodes},
 		{name: "dbFindObjects", do: d.dbFindObjects},
-		{name: "dbPingInstances", do: d.dbPingInstances},
 		{name: "dbPingObjects", do: d.dbPingObjects},
 		{name: "cacheObjectsWithoutConfig", do: d.cacheObjectsWithoutConfig},
 		{name: "pushFromTableChanges", do: d.pushFromTableChanges},
@@ -87,7 +86,8 @@ func (d *jobFeedDaemonPing) getData(ctx context.Context) error {
 
 // dbFetchNodes fetch the data nodes (that are associated with caller node ID) from the database
 // and sets d.byNodeID and d.clusterID.
-// It also updates node last_comm field.
+// It also updates node last_comm field: the instances and the resources of the
+// nodes are confirmed by it, their rows are not rewritten (see cdb.lastSeen).
 func (d *jobFeedDaemonPing) dbFetchNodes(ctx context.Context) (err error) {
 	var (
 		dbNodes []*cdb.DBNode
@@ -116,6 +116,9 @@ func (d *jobFeedDaemonPing) dbFetchNodes(ctx context.Context) (err error) {
 	if err := d.oDb.NodeUpdateLastComm(ctx, nodeIDs...); err != nil {
 		return fmt.Errorf("dbFetchNodes %s [%s] can't update node last comm for node ids %s: %w", d.callerNode, d.nodeID, nodeIDs, err)
 	}
+	// The last seen time of their instances and resources moved with it: let
+	// the views of those refresh as when the rows were rewritten.
+	d.oDb.SetChange("svcmon", "resmon")
 	return nil
 }
 
@@ -134,18 +137,6 @@ func (d *jobFeedDaemonPing) dbFindObjects(ctx context.Context) (err error) {
 		}
 		d.byObjectID[o.SvcID] = o
 		slog.Debug("dbFindObjects", logkey.ObjectID, o.SvcID)
-	}
-	return nil
-}
-
-// dbPingInstances call oDb.InstancePingFromNodeID for all db fetched nodes
-func (d *jobFeedDaemonPing) dbPingInstances(ctx context.Context) error {
-	for nodeID := range d.byNodeID {
-		if ok, err := d.oDb.InstancePingFromNodeID(ctx, nodeID); err != nil {
-			return fmt.Errorf("dbPingInstances: %w", err)
-		} else if ok {
-			continue
-		}
 	}
 	return nil
 }

@@ -250,6 +250,14 @@ func (a *Api) resolveOIDCUser(ctx context.Context, log *slog.Logger, claims *xau
 				log.Warn("sign-in of a locked account refused", "user_id", existing.ID)
 				return nil, authErrorLocked, nil
 			}
+			// One identity per account: another one already signs in as it.
+			if has, err := tx.UserHasIdentity(ctx, existing.ID); err != nil {
+				return nil, "", err
+			} else if has {
+				log.Warn("sign-in refused: the account of the email already has another identity", "user_id", existing.ID,
+					"iss", claims.Issuer, "sub", claims.Subject)
+				return nil, authErrorUnknownUser, nil
+			}
 			if err := tx.LinkIdentity(ctx, existing.ID, claims.Issuer, claims.Subject); err != nil {
 				return nil, "", err
 			}

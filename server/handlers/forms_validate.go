@@ -2,7 +2,6 @@ package serverhandlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -153,32 +152,39 @@ func (s *formSubmission) validateInput(ctx context.Context, data map[string]any,
 	}
 	key = strings.TrimLeft(key, "#")
 	for _, v := range vals {
-		args, err := formRestArgs(fn, data)
-		if err != nil {
-			return httpErrorf(http.StatusBadRequest, "cannot build the candidates url %s: missing %s", fn, err)
-		}
-		kwargs := map[string]any{}
-		for _, entry := range defList(input, "Args") {
-			es, ok := entry.(string)
-			if !ok {
-				continue
-			}
-			es = formDereference(es, data, "")
-			k, kv, found := strings.Cut(es, "=")
-			if !found {
-				continue
-			}
-			kwargs[strings.TrimSpace(k)] = formDereference(strings.TrimSpace(kv), data, "")
-		}
 		keyVal := v
 		if m, ok := v.(map[string]any); ok {
 			keyVal = m[key]
 		}
-		kwargs["limit"] = 0
-		kwargs["search"] = formValueText(keyVal)
-		kwargs["search_props"] = key
+		if isFalsy(keyVal) && !mandatory {
+			continue
+		}
+		args, err := formRestArgs(fn, data)
+		if err != nil {
+			return httpErrorf(http.StatusBadRequest, "cannot build the candidates url %s: missing %s", fn, err)
+		}
+		var entries []string
+		for _, entry := range defList(input, "Args") {
+			if es, ok := entry.(string); ok {
+				entries = append(entries, formDereference(es, data, ""))
+			}
+		}
+		// The candidates the browser offers: the Args of the input, their
+		// historical filters translated, all the rows, not a page of them.
+		query, err := candidatesQuery(entries)
+		if err != nil {
+			return httpErrorf(http.StatusBadRequest, "input '%s': %s", inputID, err)
+		}
+		query["limit"] = []string{"0"}
 		path := "/" + strings.Join(args, "/")
-		resp, err := s.callAPI(ctx, http.MethodGet, path, kwargs)
+		// Narrowed to the submitted value, when the list can filter on the key:
+		// the comparison below stays the judge, exact and case-sensitive.
+		narrowed := cloneQuery(query)
+		narrowed["filter"] = append(narrowed["filter"], key+":eq:"+formValueText(keyVal))
+		resp, err := s.callAPI(ctx, http.MethodGet, path, narrowed)
+		if err == nil && resp.status == http.StatusBadRequest {
+			resp, err = s.callAPI(ctx, http.MethodGet, path, query)
+		}
 		if err != nil {
 			return httpErrorf(http.StatusBadRequest, "cannot verify the submitted value is a valid candidate: %s", err)
 		}
@@ -199,15 +205,21 @@ func (s *formSubmission) validateInput(ctx context.Context, data map[string]any,
 				candidates = append(candidates, formValueText(cv))
 			}
 		}
-		if isFalsy(keyVal) && !mandatory {
-			continue
-		}
 		if !containsString(candidates, formValueText(keyVal)) {
-			return httpErrorf(http.StatusBadRequest, "Input '%s' value '%s' not in allowed candidates %s obtained from %s",
-				inputID, formValueText(keyVal), fmt.Sprint(candidates), path)
+			return httpErrorf(http.StatusBadRequest, "Input '%s' value '%s' not in the allowed candidates obtained from %s",
+				inputID, formValueText(keyVal), path)
 		}
 	}
 	return nil
+}
+
+// cloneQuery copies a query, its values too.
+func cloneQuery(q map[string][]string) map[string][]string {
+	out := make(map[string][]string, len(q))
+	for k, v := range q {
+		out[k] = append([]string(nil), v...)
+	}
+	return out
 }
 
 // isFalsy tells whether a value is false for python: empty or zero.

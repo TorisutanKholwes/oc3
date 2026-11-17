@@ -4,16 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
+	"github.com/opensvc/oc3/cachekeys"
 	"github.com/opensvc/oc3/cdb"
 )
 
 var TaskAlert1M = Task{
 	name: "alerts_1m",
 	children: TaskList{
+		TaskAlertFrozen,
 		TaskAlertInstancesNotUpdated,
+		TaskAlertSlowTask,
 	},
 	period:  time.Minute,
 	timeout: 15 * time.Second,
@@ -25,6 +31,7 @@ var TaskAlert1H = Task{
 		TaskAlertActionErrorCleanup,
 		TaskAlertAppsWithoutResponsible,
 		TaskAlertChecksNotUpdated,
+		TaskAlertCompDiff,
 		TaskAlertNetworkWithWrongMask,
 		TaskAlertNodesNotUpdated,
 		TaskAlertServiceConfigNotUpdated,
@@ -114,6 +121,24 @@ var TaskAlertCompRsetDiff = Task{
 	timeout: 5 * time.Minute,
 }
 
+var TaskAlertFrozen = Task{
+	name:    "alert_frozen",
+	fn:      taskAlertFrozen,
+	timeout: 15 * time.Second,
+}
+
+var TaskAlertSlowTask = Task{
+	name:    "alert_slow_task",
+	fn:      taskAlertSlowTask,
+	timeout: 15 * time.Second,
+}
+
+var TaskAlertCompDiff = Task{
+	name:    "alert_compliance_differences_in_cluster",
+	fn:      taskAlertCompDiff,
+	timeout: 5 * time.Minute,
+}
+
 var TaskAlertMACDup = Task{
 	name:    "alert_mac_dup",
 	fn:      taskAlertMACDup,
@@ -178,6 +203,81 @@ var TaskAlertChecksNotUpdated = Task{
 	name:    "alert_checks_not_updated",
 	fn:      taskAlertChecksNotUpdated,
 	timeout: 5 * time.Minute,
+}
+
+func taskAlertFrozen(ctx context.Context, task *Task) error {
+	odb, err := task.DBX(ctx)
+	if err != nil {
+		return err
+	}
+	defer odb.Rollback()
+	if err := odb.DashboardUpdateFrozen(ctx); err != nil {
+		return err
+	}
+	if err := odb.Session.NotifyChanges(ctx); err != nil {
+		return err
+	}
+	return odb.Commit()
+}
+
+// slowFeedWait is the wait of a feed for a worker past which it counts in the
+// "slow task" alert.
+const slowFeedWait = 5 * time.Minute
+
+func taskAlertSlowTask(ctx context.Context, task *Task) error {
+	if task.Redis == nil {
+		return nil
+	}
+	n, err := countSlowFeeds(ctx, task.Redis, time.Now().Add(-slowFeedWait))
+	if err != nil {
+		return err
+	}
+	odb, err := task.DBX(ctx)
+	if err != nil {
+		return err
+	}
+	defer odb.Rollback()
+	if err := odb.DashboardUpdateSlowTask(ctx, n); err != nil {
+		return err
+	}
+	if err := odb.Session.NotifyChanges(ctx); err != nil {
+		return err
+	}
+	return odb.Commit()
+}
+
+// countSlowFeeds returns the count of the feeds queued before since and not
+// yet taken by a worker. A pending element valued otherwise than by the time
+// it was queued, by a feeder of before, is not counted.
+func countSlowFeeds(ctx context.Context, r *redis.Client, since time.Time) (int, error) {
+	var n int
+	for _, key := range cachekeys.PendingHashes {
+		m, err := r.HGetAll(ctx, key).Result()
+		if err != nil {
+			return 0, fmt.Errorf("countSlowFeeds: HGETALL %s: %w", key, err)
+		}
+		for _, v := range m {
+			if queuedAt, err := strconv.ParseInt(v, 10, 64); err == nil && queuedAt < since.Unix() {
+				n++
+			}
+		}
+	}
+	return n, nil
+}
+
+func taskAlertCompDiff(ctx context.Context, task *Task) error {
+	odb, err := task.DBX(ctx)
+	if err != nil {
+		return err
+	}
+	defer odb.Rollback()
+	if err := odb.DashboardUpdateCompDiff(ctx); err != nil {
+		return err
+	}
+	if err := odb.Session.NotifyChanges(ctx); err != nil {
+		return err
+	}
+	return odb.Commit()
 }
 
 func taskAlertMACDup(ctx context.Context, task *Task) error {

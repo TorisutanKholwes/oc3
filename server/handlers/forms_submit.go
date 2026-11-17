@@ -572,11 +572,18 @@ func (s *formSubmission) callAPI(ctx context.Context, method, path string, vars 
 	target := formsAPIBase() + path
 	var body io.Reader
 	if method == http.MethodGet {
-		if m, ok := vars.(map[string]any); ok && len(m) > 0 {
-			q := url.Values{}
+		q := url.Values{}
+		switch m := vars.(type) {
+		case map[string]any:
 			for k, v := range m {
 				q.Set(k, formValueText(v))
 			}
+		case map[string][]string:
+			for k, v := range m {
+				q[k] = v
+			}
+		}
+		if len(q) > 0 {
 			target += "?" + q.Encode()
 		}
 	} else if vars != nil {

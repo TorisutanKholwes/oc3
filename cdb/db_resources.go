@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -139,56 +138,16 @@ func (t ResourceMeta) String() string {
 	return fmt.Sprintf("%s@%s:%s", t.OID, t.NID, t.RID)
 }
 
-// ResmonRefreshTimestamp updates resmon.updated and resmon_log_last.res_end for object ids with node id.
-func (oDb *DB) ResmonRefreshTimestamp(ctx context.Context, nodeID string, objectIDs ...string) (updates bool, err error) {
-	defer logDuration("ResmonRefreshTimestamp", time.Now())
-	const (
-		qUpdateResmon = "UPDATE `resmon` SET `updated` = NOW() WHERE `node_id` = ? AND `svc_id` IN (%s)"
-		// Only the resources the instances still have, see InstancePingFromNodeID.
-		qUpdateResmonLogLast = "UPDATE `resmon_log_last` l" +
-			" JOIN `resmon` r ON r.`svc_id` = l.`svc_id` AND r.`node_id` = l.`node_id` AND r.`rid` = l.`rid`" +
-			" SET l.`res_end` = NOW() WHERE l.`node_id` = ? AND l.`svc_id` IN (%s)"
-	)
-	var (
-		count int64
-		query string
-	)
-	begin := time.Now()
-	if len(objectIDs) == 0 {
-		return
-	}
-	placeholders := strings.Repeat("?,", len(objectIDs)-1) + "?"
-	args := make([]any, len(objectIDs)+1)
-	args[0] = nodeID
-	for i, v := range objectIDs {
-		args[i+1] = v
-	}
-
-	query = fmt.Sprintf(qUpdateResmon, placeholders)
-	if count, err = oDb.execCountContext(ctx, query, args...); err != nil {
-		return
-	} else if count > 0 {
-		updates = true
-		oDb.SetChange("resmon")
-		oDb.Metrics.ResourceStatusUpdate.Add(float64(count))
-	}
-
-	query = fmt.Sprintf(qUpdateResmonLogLast, placeholders)
-	if _, err = oDb.ExecContext(ctx, query, args...); err != nil {
-		return
-	}
-
-	slog.Debug(fmt.Sprintf("ResmonRefreshTimestamp %s", time.Since(begin)))
-	return
-}
-
 // ResourceOutdatedLists returns the resmon entries not in "undef" status and
 // not updated since maxAge.
 func (oDb *DB) ResourceOutdatedLists(ctx context.Context, maxAge time.Duration) (resources []ResourceMeta, err error) {
-	sql := `SELECT id, rid, svc_id, node_id FROM resmon
-                WHERE updated < DATE_SUB(NOW(), INTERVAL ? SECOND)
-                AND res_status != "undef"`
-	rows, err := oDb.DB.QueryContext(ctx, sql, maxAgeSeconds(maxAge))
+	// The resmon.updated condition, implied by the other, uses its index.
+	sql := `SELECT r.id, r.rid, r.svc_id, r.node_id FROM resmon r
+                LEFT JOIN nodes n ON n.node_id = r.node_id
+                WHERE r.updated < DATE_SUB(NOW(), INTERVAL ? SECOND)
+                AND ` + lastSeen("r.updated", "n.last_comm") + ` < DATE_SUB(NOW(), INTERVAL ? SECOND)
+                AND r.res_status != "undef"`
+	rows, err := oDb.DB.QueryContext(ctx, sql, maxAgeSeconds(maxAge), maxAgeSeconds(maxAge))
 	if err != nil {
 		return
 	}
@@ -295,8 +254,8 @@ func (oDb *DB) ResourceUpdateStatus(ctx context.Context, resources []ResourceMet
 const resmonLogLastPurgeBatch = 10000
 
 // PurgeResmonLogLastOrphans deletes the current status logs of the resources gone
-// for maxAge: no resmon row, and a res_end older, which stops moving when the
-// resource goes (InstancePingFromNodeID, ResmonRefreshTimestamp). A resource gone
+// for maxAge: no resmon row, and a res_end older, set when the resource goes
+// (resmonLogLastEndGone). A resource gone
 // for a moment, an instance missing from a feed, keeps its log and the begin of
 // its status. Nothing else deletes them but the deletion of a node or an object,
 // and the table used to grow without end.
@@ -521,24 +480,46 @@ func (oDb *DB) ResmonUpdate(ctx context.Context, l ...*DBInstanceResource) error
 	return nil
 }
 
-func (oDb *DB) ResmonPurgeExpired(ctx context.Context, maxTime time.Time, l ...string) error {
+// ResmonPurgeExpired deletes the resources of the nodes not written since
+// maxTime, the resources of their instances a daemon status no longer reports,
+// but those of the instances of keep, by node id: the instances it reports
+// unchanged, whose rows are not rewritten (see lastSeen).
+func (oDb *DB) ResmonPurgeExpired(ctx context.Context, maxTime time.Time, nodeIDs []string, keep map[string][]string) error {
 	defer logDuration("ResmonPurgeExpired", time.Now())
-	if len(l) == 0 {
-		return nil
+	for _, nodeID := range nodeIDs {
+		where := "r.`node_id` = ? AND r.`updated` < ?"
+		args := []any{nodeID, maxTime}
+		if kept := keep[nodeID]; len(kept) > 0 {
+			where += " AND r.`svc_id` NOT IN (" + Placeholders(len(kept)) + ")"
+			for _, svcID := range kept {
+				args = append(args, svcID)
+			}
+		}
+		if err := oDb.resmonLogLastEndGone(ctx, where, args...); err != nil {
+			return err
+		}
+		count, err := oDb.execCountContext(ctx, "DELETE r FROM `resmon` r WHERE "+where, args...)
+		if err != nil {
+			return err
+		}
+		if count > 0 {
+			oDb.Metrics.ResourceStatusDelete.Add(float64(count))
+		}
 	}
-	placeholders := strings.Repeat("?,", len(l)-1) + "?"
-	// TODO: verify improvements with: DELETE FROM resmon FORCE INDEX (idx_node_id_updated)
-	query := fmt.Sprintf("DELETE FROM `resmon` WHERE `node_id` IN (%s) AND `updated` < ?", placeholders)
-	args := make([]any, len(l)+1)
-	for i, v := range l {
-		args[i] = v
-	}
-	args[len(l)] = maxTime
+	return nil
+}
 
-	if count, err := oDb.execCountContext(ctx, query, args...); err != nil {
-		return err
-	} else if count > 0 {
-		oDb.Metrics.ResourceStatusDelete.Add(float64(count))
+// resmonLogLastEndGone ends now the current status logs of the resmon rows r
+// matching where, about to be deleted: the ping no longer moves res_end (see
+// lastSeen), so it tells from then on when the resource went, which the
+// purge of the logs of the resources gone counts from
+// (PurgeResmonLogLastOrphans), and which ends its current status period.
+func (oDb *DB) resmonLogLastEndGone(ctx context.Context, where string, args ...any) error {
+	query := "UPDATE `resmon_log_last` l" +
+		" JOIN `resmon` r ON r.`svc_id` = l.`svc_id` AND r.`node_id` = l.`node_id` AND r.`rid` = l.`rid`" +
+		" SET l.`res_end` = NOW() WHERE " + where
+	if _, err := oDb.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("resmonLogLastEndGone: %w", err)
 	}
 	return nil
 }

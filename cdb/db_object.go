@@ -744,9 +744,10 @@ func (oDb *DB) PurgeTablesFromObjectID(ctx context.Context, id string) error {
 func (oDb *DB) ObjectsOutdated(ctx context.Context, maxAge time.Duration) (objects []ObjectMeta, err error) {
 	sql := `SELECT id, svc_id, svcname FROM services
                 WHERE svc_id IN (
-                  SELECT svc_id FROM svcmon
-                  GROUP BY svc_id
-                  HAVING SUM(mon_updated >= DATE_SUB(NOW(), INTERVAL ? SECOND)) = 0
+                  SELECT m.svc_id FROM svcmon m
+                  LEFT JOIN nodes n ON n.node_id = m.node_id
+                  GROUP BY m.svc_id
+                  HAVING SUM(COALESCE(` + lastSeen("m.mon_updated", "n.last_comm") + ` >= DATE_SUB(NOW(), INTERVAL ? SECOND), 0)) = 0
                 )
                 AND (svc_status != "undef" OR svc_availstatus != "undef")`
 	rows, err := oDb.DB.QueryContext(ctx, sql, maxAgeSeconds(maxAge))

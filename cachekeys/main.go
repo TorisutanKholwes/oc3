@@ -70,3 +70,19 @@ const (
 	FeedNodeChecksQ        = "oc3:q:feed_node_checks"
 	FeedNodeChecksPendingH = "oc3:h:feed_node_checks_pending"
 )
+
+// PendingHashes are the hashes of the feeds queued and not yet taken by a
+// worker, each element valued with the unix time it was queued at.
+var PendingHashes = []string{
+	FeedDaemonPingPendingH,
+	FeedDaemonStatusPendingH,
+	FeedInstanceResourceInfoPendingH,
+	FeedNodeDiskPendingH,
+	FeedArrayPendingH,
+	FeedSANSwitchPendingH,
+	FeedObjectConfigPendingH,
+	FeedSystemPendingH,
+	FeedInstanceStatusPendingH,
+	FeedInstanceActionPendingH,
+	FeedNodeChecksPendingH,
+}

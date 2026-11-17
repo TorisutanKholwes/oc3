@@ -8927,6 +8927,288 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /sysreport/secure_patterns:
+    get:
+      operationId: GetSysreportSecurePatterns
+      description: |
+        List the sysreport secure patterns. A secure pattern is a regular
+        expression: the content and diffs of the sysreport files whose path
+        matches any pattern are only shown to the managers, the node
+        responsibles and the groups a sysreport authorization lets see them.
+        Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportSecurePatternListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostSysreportSecurePatterns
+      description: |
+        Create a sysreport secure pattern. The pattern is a regular expression
+        of the Go syntax (RE2), matched from the start of the file path, as the
+        sysreport access checks do. Requires the Manager privilege. The action
+        is logged in the collector's log and the table change is announced.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysreportSecurePatternInput'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportSecurePatternListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /sysreport/secure_patterns/{id}:
+    get:
+      operationId: GetSysreportSecurePattern
+      description: A sysreport secure pattern. Requires a user authentication.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/inQueryProps'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportSecurePatternListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteSysreportSecurePattern
+      description: |
+        Delete a sysreport secure pattern. Requires the Manager privilege. The
+        action is logged in the collector's log and the table change is
+        announced.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    type: string
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /sysreport/authorizations:
+    get:
+      operationId: GetSysreportAuthorizations
+      description: |
+        List the sysreport authorizations. An authorization is an
+        organizational group, filterset and regular expression tuple: the
+        members of the group can see the sysreport content and diffs of the
+        files whose path matches the regular expression, on the nodes of the
+        filterset. Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportAuthorizationListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostSysreportAuthorizations
+      description: |
+        Create a sysreport authorization. The group is given by group_id or
+        group_name, the filterset by fset_id or fset_name. The pattern is a
+        regular expression of the Go syntax (RE2), matched from the start of the
+        file path, as the sysreport access checks do. Requires the Manager
+        privilege. The action is logged in the collector's log and the table
+        change is announced.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysreportAuthorizationInput'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportAuthorizationListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /sysreport/authorizations/{id}:
+    get:
+      operationId: GetSysreportAuthorization
+      description: A sysreport authorization. Requires a user authentication.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/inQueryProps'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SysreportAuthorizationListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteSysreportAuthorization
+      description: |
+        Delete a sysreport authorization. Requires the Manager privilege. The
+        action is logged in the collector's log and the table change is
+        announced.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    type: string
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /sysreport/purges/{purge_id}:
     get:
       operationId: GetSysreportPurge
@@ -9118,7 +9400,539 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /networks/{net_id}:
+    get:
+      operationId: GetNetwork
+      description: |
+        Display a declared network. Every authenticated user may read it.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostNetwork
+      description: |
+        Change the properties of a declared network, as the historical collector's
+        rest_post_network did. Requires the NetworkManager privilege and, unless the
+        caller is a manager, membership of the network's responsible team. The
+        properties left out are kept. A new `network`/`netmask` must be a network
+        address, must not be declared already (409) and must still hold the
+        segments of the network (409).
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                network:
+                  type: string
+                  description: IPv4 network address, for example 192.168.10.0
+                netmask:
+                  type: integer
+                  minimum: 0
+                  maximum: 32
+                  description: Prefix length
+                gateway:
+                  type: string
+                  description: IPv4 address inside the network, empty to unset
+                comment:
+                  type: string
+                pvid:
+                  type: integer
+                  description: VLAN id
+                prio:
+                  type: integer
+                  minimum: 0
+                  maximum: 99
+                  description: Priority among overlapping networks
+                team_responsible:
+                  type: string
+                  description: Organisational group responsible for the network
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteNetwork
+      description: |
+        Delete a declared network, its segments and their responsible groups.
+        Requires the NetworkManager privilege and, unless the caller is a manager,
+        membership of the network's responsible team.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /networks/{net_id}/ips:
+    get:
+      operationId: GetNetworkIps
+      description: |
+        The addresses of a network, as the historical collector's
+        rest_get_network_ips listed them: those of the segments of the network the
+        caller's groups are responsible for (all of them for a manager or a member
+        of the network's responsible team), or every
+        address of the network when it has no segment. Each address tells the
+        segment it is in and the nodes reporting it. The DNS records of the
+        historical collector are not listed. A range over 65536 addresses is
+        refused with 400.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: query
+          name: free
+          description: Only the addresses no node reports
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkIpListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /networks/{net_id}/segments/{seg_id}:
+    get:
+      operationId: GetNetworkSegment
+      description: |
+        Display a segment of a network. Every authenticated user may read it.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: path
+          name: seg_id
+          required: true
+          description: Record id of the segment
+          schema:
+            type: string
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkSegmentListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostNetworkSegment
+      description: |
+        Change the type or the range of a segment, as the historical collector's
+        rest_post_network_segment did. Requires the NetworkManager privilege and,
+        unless the caller is a manager, membership of a group responsible for the
+        segment or of the network's responsible team. The range must lie inside the
+        network and must not overlap another segment of it (409).
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: path
+          name: seg_id
+          required: true
+          description: Record id of the segment
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                seg_type:
+                  type: string
+                  enum: [static, dynamic]
+                seg_begin:
+                  type: string
+                  description: First IPv4 address of the segment
+                seg_end:
+                  type: string
+                  description: Last IPv4 address of the segment
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkSegmentListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteNetworkSegment
+      description: |
+        Delete a segment of a network and its responsible groups. Requires the
+        NetworkManager privilege and, unless the caller is a manager, membership of
+        the network's responsible team.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: path
+          name: seg_id
+          required: true
+          description: Record id of the segment
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /networks/{net_id}/segments/{seg_id}/responsibles:
+    get:
+      operationId: GetNetworkSegmentResponsibles
+      description: |
+        The groups responsible for a segment: their members may allocate its
+        addresses. Every authenticated user may read them.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: path
+          name: seg_id
+          required: true
+          description: Record id of the segment
+          schema:
+            type: string
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkSegmentResponsibleListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /networks/{net_id}/segments/{seg_id}/responsibles/{group_id}:
+    post:
+      operationId: PostNetworkSegmentResponsible
+      description: |
+        Make a group responsible for a segment. Unless the caller is a manager, it
+        must be a member of a group responsible for the segment or of the network's
+        responsible team. A group already responsible is refused with 409.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: path
+          name: seg_id
+          required: true
+          description: Record id of the segment
+          schema:
+            type: string
+        - in: path
+          name: group_id
+          required: true
+          description: Id or role of an organisational group
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkSegmentResponsibleListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteNetworkSegmentResponsible
+      description: |
+        Detach a responsible group from a segment, with the same authorization as
+        the attachment.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - in: path
+          name: seg_id
+          required: true
+          description: Record id of the segment
+          schema:
+            type: string
+        - in: path
+          name: group_id
+          required: true
+          description: Id or role of an organisational group
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /networks/{net_id}/segments:
+    get:
+      operationId: GetNetworkSegments
+      description: |
+        The segments of a network, by first address. Every authenticated user may
+        read them.
+      parameters:
+        - in: path
+          name: net_id
+          required: true
+          description: Record id of the network
+          schema:
+            type: string
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkSegmentListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
     post:
       operationId: PostNetworkSegments
       description: |
@@ -12536,6 +13350,229 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /oidc_provider:
+    get:
+      operationId: GetOidcProvider
+      description: |
+        Whether the collector is the OpenID Connect provider of the om3 clusters,
+        and its issuer. An om3 cluster signs its users in with the collector when
+        its listener.openid_issuer is this issuer and its listener.openid_client_id
+        its cluster id.
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderInfo'
+        401:
+          $ref: '#/components/responses/401'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /oidc_provider/requests/{request_id}:
+    get:
+      operationId: GetOidcProviderRequest
+      description: |
+        A sign-in request of an om3 cluster, waiting for the user to approve it:
+        the cluster asking, where the browser goes back, and the om3 grants the
+        user would get on the cluster.
+      parameters:
+        - $ref: '#/components/parameters/inPathOidcProviderRequestID'
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderRequest'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /oidc_provider/requests/{request_id}/approve:
+    post:
+      operationId: PostOidcProviderRequestApprove
+      description: |
+        Approve a sign-in request of an om3 cluster as the user signed in: the
+        answer is where to send the browser, the cluster's redirection URI with
+        the authorization code. Refused while impersonating, to a locked account,
+        and to a user with no om3 grant on the cluster (the request stays, to be
+        denied).
+      parameters:
+        - $ref: '#/components/parameters/inPathOidcProviderRequestID'
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderRedirect'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /oidc_provider/requests/{request_id}/deny:
+    post:
+      operationId: PostOidcProviderRequestDeny
+      description: |
+        Deny a sign-in request of an om3 cluster: the answer is where to send the
+        browser, the cluster's redirection URI with the access_denied error.
+      parameters:
+        - $ref: '#/components/parameters/inPathOidcProviderRequestID'
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderRedirect'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /oidc_provider/grants:
+    get:
+      operationId: GetOidcProviderGrants
+      description: |
+        The rules giving om3 grants to the teams, on a cluster or on every
+        cluster: the tokens a user gets for a cluster carry the grants of the
+        rules naming one of their teams. Manager only.
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderGrantList'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostOidcProviderGrants
+      description: |
+        Create a rule: one per team and cluster (or every cluster). The grants are
+        om3 grants separated by spaces: root, prioritizer, squatter,
+        blacklistadmin, scraper, and admin, operator, guest, alone or on a
+        namespace or a namespace pattern (admin:prod, guest:*). Manager only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OidcProviderGrantInput'
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderGrant'
+        400:
+          $ref: '#/components/responses/400'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /oidc_provider/grants/{grant_id}:
+    post:
+      operationId: PostOidcProviderGrant
+      description: Change a rule, under the same checks as its creation. Manager only.
+      parameters:
+        - $ref: '#/components/parameters/inPathOidcProviderGrantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OidcProviderGrantInput'
+      tags:
+        - auth
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OidcProviderGrant'
+        400:
+          $ref: '#/components/responses/400'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteOidcProviderGrant
+      description: Delete a rule. Manager only.
+      parameters:
+        - $ref: '#/components/parameters/inPathOidcProviderGrantID'
+      tags:
+        - auth
+      responses:
+        204:
+          description: Deleted
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /openapi.json:
     get:
       operationId: GetSwagger
@@ -15384,6 +16421,60 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /topology:
+    get:
+      operationId: GetTopology
+      description: |
+        The topology of nodes and services, as the historical collector drew it:
+        a graph of the objects of the layers asked for, and of what relates them.
+        It starts from the nodes, services and applications given, those of the
+        applications the caller's groups are responsible for unless a manager,
+        then takes the services of those nodes and the nodes of those services.
+        More than 1000 nodes and services are refused with a 400.
+      parameters:
+        - in: query
+          name: node_ids
+          description: Comma-separated node ids to start from
+          schema:
+            type: string
+        - in: query
+          name: svc_ids
+          description: Comma-separated service ids to start from
+          schema:
+            type: string
+        - in: query
+          name: app_ids
+          description: Comma-separated application ids to start from
+          schema:
+            type: string
+        - in: query
+          name: display
+          required: true
+          description: |
+            Comma-separated layers to show: nodes, services, apps, envs,
+            resources, disks, arrays, san, and the locations hvs, hvpools,
+            hvvdcs, enclosures, racks, rooms, buildings, cities, countries.
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topology'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /users:
     get:
       operationId: GetUsers
@@ -15918,6 +17009,158 @@ paths:
                 $ref: '#/components/schemas/GroupListResponse'
         401:
           $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /users/{user_id}/identities:
+    get:
+      operationId: GetUserIdentities
+      description: |
+        The OpenID Connect identities linked to an account: an access token of one
+        of them signs in as the account. Requires the UserManager privilege, but for
+        one's own account.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: |
+            User identifier: auth_user.id, the user email when it contains an
+            "@", or "self" for the authenticated user.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserIdentityListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostUserIdentities
+      description: |
+        Link an OpenID Connect identity to an account, for an automation whose
+        account never signs in through the browser, where the link is otherwise
+        made: the access tokens of the identity then sign in as the account.
+        `subject` is the `sub` claim of its tokens; `issuer` defaults to, and must
+        be, the issuer of the collector's provider. Requires the UserManager
+        privilege; only a Manager links an identity to a Manager. An account has
+        one identity at most: an account having one, or an identity already
+        linked, is refused with a 409. The link is logged.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: |
+            User identifier: auth_user.id, the user email when it contains an
+            "@", or "self" for the authenticated user.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subject
+              properties:
+                subject:
+                  type: string
+                  description: The sub claim of the identity's tokens
+                issuer:
+                  type: string
+                  description: The iss claim of the identity's tokens
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserIdentityListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /users/{user_id}/identities/{identity_id}:
+    delete:
+      operationId: DeleteUserIdentity
+      description: |
+        Unlink an OpenID Connect identity from an account: its access tokens no
+        longer sign in, and its next browser sign-in links it again by email when
+        an account has the email. Requires the UserManager privilege; only a
+        Manager unlinks an identity of a Manager. The unlink is logged.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: |
+            User identifier: auth_user.id, the user email when it contains an
+            "@", or "self" for the authenticated user.
+          schema:
+            type: string
+        - in: path
+          name: identity_id
+          required: true
+          description: Record id of the link
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
         500:
           $ref: '#/components/responses/500'
       security:
@@ -29061,6 +30304,96 @@ components:
           items:
             type: integer
 
+    OidcProviderInfo:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+        issuer:
+          type: string
+          description: The issuer the om3 clusters name in listener.openid_issuer
+
+    OidcProviderRequest:
+      type: object
+      required: [request_id, client_id, cluster_name, redirect_uri, scope, prompt, user, grants]
+      properties:
+        request_id:
+          type: string
+        client_id:
+          type: string
+          description: The cluster id
+        cluster_name:
+          type: string
+        redirect_uri:
+          type: string
+        scope:
+          type: string
+        prompt:
+          type: string
+          description: The prompt values of the request (none, login, consent), space separated
+        user:
+          type: string
+          description: The email of the user signed in
+        grants:
+          type: array
+          description: The om3 grants the user would get on the cluster
+          items:
+            type: string
+
+    OidcProviderRedirect:
+      type: object
+      required: [redirect_to]
+      properties:
+        redirect_to:
+          type: string
+
+    OidcProviderGrant:
+      type: object
+      required: [id, group_id, group_role, cluster_id, cluster_name, grants, author, updated]
+      properties:
+        id:
+          type: integer
+        group_id:
+          type: integer
+        group_role:
+          type: string
+        cluster_id:
+          type: string
+          description: The cluster, empty for every cluster
+        cluster_name:
+          type: string
+        grants:
+          type: string
+          description: om3 grants, space separated
+        author:
+          type: string
+        updated:
+          type: string
+          format: date-time
+
+    OidcProviderGrantList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OidcProviderGrant'
+
+    OidcProviderGrantInput:
+      type: object
+      required: [group_id, grants]
+      properties:
+        group_id:
+          type: integer
+        cluster_id:
+          type: string
+          description: The cluster, empty or absent for every cluster
+        grants:
+          type: string
+          description: om3 grants, separated by spaces or commas
+
     FieldConstraintObjectKind:
       type: string
       description: |
@@ -29817,6 +31150,102 @@ components:
           items:
             $ref: '#/components/schemas/SearchGroup'
 
+    SysreportSecurePatternRow:
+      type: object
+      description: |
+        A sysreport secure pattern. Every property is optional: the `props`
+        query parameter selects which columns the server returns.
+      properties:
+        id:
+          type: integer
+        pattern:
+          type: string
+
+    SysreportSecurePatternListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/SysreportSecurePatternRow'
+            - type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: integer
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+
+    SysreportSecurePatternInput:
+      type: object
+      required: [pattern]
+      properties:
+        pattern:
+          type: string
+          description: A regular expression matched from the start of the file path.
+
+    SysreportAuthorizationRow:
+      type: object
+      description: |
+        A sysreport authorization, with the names of its group and filterset,
+        empty when they do not exist any more. Every property is optional: the
+        `props` query parameter selects which columns the server returns.
+      properties:
+        id:
+          type: integer
+        pattern:
+          type: string
+        group_id:
+          type: integer
+        group_name:
+          type: string
+        fset_id:
+          type: integer
+        fset_name:
+          type: string
+
+    SysreportAuthorizationListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/SysreportAuthorizationRow'
+            - type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: integer
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+
+    SysreportAuthorizationInput:
+      type: object
+      required: [pattern]
+      description: The group by group_id or group_name, the filterset by fset_id or fset_name.
+      properties:
+        group_id:
+          type: integer
+          description: The id of the group to authorize. Exclusive with group_name.
+        group_name:
+          type: string
+          description: The name of the group to authorize. Exclusive with group_id.
+        fset_id:
+          type: integer
+          description: The id of the filterset of the nodes the authorization applies to. Exclusive with fset_name.
+        fset_name:
+          type: string
+          description: The name of the filterset of the nodes the authorization applies to. Exclusive with fset_id.
+        pattern:
+          type: string
+          description: A regular expression matched from the start of the file path.
+
     SysreportFileStat:
       type: object
       description: A file or command output changed by a report.
@@ -30117,8 +31546,82 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/NetworkSegmentRow'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
         info:
           type: string
+
+    NetworkSegmentResponsibleRow:
+      type: object
+      description: A group responsible for a segment of a network.
+      properties:
+        id:
+          type: integer
+        seg_id:
+          type: integer
+        group_id:
+          type: integer
+        role:
+          type: string
+          description: Name of the group
+        description:
+          type: string
+
+    NetworkSegmentResponsibleListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkSegmentResponsibleRow'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+        info:
+          type: string
+
+    NetworkIpRow:
+      type: object
+      description: An address of a network, with its segment and the nodes reporting it.
+      required:
+        - ip
+        - nodes
+      properties:
+        ip:
+          type: string
+        seg_id:
+          type: integer
+          nullable: true
+        seg_type:
+          type: string
+          description: static or dynamic, empty outside segments
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkIpNode'
+
+    NetworkIpNode:
+      type: object
+      description: A node reporting an address.
+      required: [node_id, nodename]
+      properties:
+        node_id:
+          type: string
+        nodename:
+          type: string
+
+    NetworkIpListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkIpRow'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
 
     CheckRow:
       type: object
@@ -30954,6 +32457,97 @@ components:
               count:
                 type: integer
                 format: int64
+
+    UserIdentityRow:
+      type: object
+      description: An OpenID Connect identity linked to an account.
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        issuer:
+          type: string
+        subject:
+          type: string
+        created:
+          type: string
+        last_login:
+          type: string
+          description: Last browser sign-in through the identity
+
+    UserIdentityListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserIdentityRow'
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+        info:
+          type: string
+
+    Topology:
+      type: object
+      description: A graph of nodes, services and what relates them.
+      required: [vertices, edges]
+      properties:
+        vertices:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyVertex'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyEdge'
+
+    TopologyVertex:
+      type: object
+      required: [id, kind, layer, label]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          description: |
+            node, service, app, env, disk, array, sansw, a location layer, or
+            for a resource its type family (ip, fs, disk, container.docker, app...).
+        layer:
+          type: string
+          enum: [nodes, services, apps, envs, resources, disks, arrays, san, hvs, hvpools, hvvdcs, enclosures, racks, rooms, buildings, cities, countries]
+        label:
+          type: string
+        detail:
+          type: string
+          description: Operating system and model of a node, disks of a disk group.
+        status:
+          type: string
+          description: Availability of a service; undef when not updated for 15 minutes.
+        node_id:
+          type: string
+        svc_id:
+          type: string
+        count:
+          type: integer
+          description: Resources of a resource type, disks of a disk group.
+
+    TopologyEdge:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        status:
+          type: string
+          description: Availability of the instance or the resource the edge stands for.
+        label:
+          type: string
+          description: A count, or the links of a SAN path by speed.
 
     InfoResponse:
       type: object
@@ -31898,6 +33492,18 @@ components:
           $ref: '#/components/schemas/ListMeta'
 
   parameters:
+    inPathOidcProviderRequestID:
+      in: path
+      name: request_id
+      required: true
+      schema:
+        type: string
+    inPathOidcProviderGrantID:
+      in: path
+      name: grant_id
+      required: true
+      schema:
+        type: integer
     inQueryAIBackend:
       in: query
       name: backend

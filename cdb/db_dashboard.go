@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 )
@@ -409,48 +410,6 @@ func (oDb *DB) GetServiceAlerts(ctx context.Context, svcID string, p ListParams)
 	return scanRowsToMaps(rows, p.Props, p.TypeHints)
 }
 
-// DashboardInstanceFrozenUpdate update or remove the "service frozen" alerts for instance
-func (oDb *DB) DashboardInstanceFrozenUpdate(ctx context.Context, objectID, nodeID string, objectEnv string, frozen bool) error {
-	defer logDuration("dashboardInstanceFrozenUpdate", time.Now())
-	const (
-		queryThawed = `
-			DELETE FROM dashboard
-			WHERE 
-			    dash_type = 'service frozen' 
-			  AND svc_id = ?
-			  AND node_id = ?
-			`
-		sourceFrozen = `SELECT 'service frozen' AS dash_type, ? AS svc_id, ? AS node_id,
-			1 AS dash_severity, '' AS dash_fmt, '' AS dash_dict,
-			NOW() AS dash_created, NOW() AS dash_updated, ? AS dash_env`
-	)
-	var (
-		err   error
-		count int64
-	)
-	switch frozen {
-	case true:
-		count, err = oDb.upsertAlerts(ctx, alertsUpsert{
-			source:  sourceFrozen,
-			args:    []any{objectID, nodeID, objectEnv},
-			columns: []string{"dash_type", "svc_id", "node_id", "dash_severity", "dash_fmt", "dash_dict", "dash_created", "dash_updated", "dash_env"},
-			update:  []string{"dash_severity = s.dash_severity", "dash_fmt = s.dash_fmt", "dash_dict = s.dash_dict", "dash_updated = s.dash_updated", "dash_env = s.dash_env"},
-		})
-		if err != nil {
-			return fmt.Errorf("update dashboard 'service frozen' for %s@%s: %w", objectID, nodeID, err)
-		}
-	case false:
-		count, err = oDb.execCountContext(ctx, queryThawed, objectID, nodeID)
-		if err != nil {
-			return fmt.Errorf("delete dashboard 'service frozen' for %s@%s: %w", objectID, nodeID, err)
-		}
-	}
-	if count > 0 {
-		oDb.SetChange("dashboard")
-	}
-	return nil
-}
-
 // dashboardDeleteInstanceNotUpdated delete "instance status not updated" alerts.
 func (oDb *DB) DashboardDeleteInstanceNotUpdated(ctx context.Context, objectID, nodeID string) error {
 	defer logDuration("dashboardDeleteInstanceNotUpdated", time.Now())
@@ -465,21 +424,48 @@ func (oDb *DB) DashboardDeleteInstanceNotUpdated(ctx context.Context, objectID, 
 	return nil
 }
 
+// dashboardDeleteBatch bounds the services of a DashboardObjectWithTypeDelete
+// statement.
+const dashboardDeleteBatch = 1000
+
+// DashboardObjectWithTypeDelete deletes the alerts of the (object, type) of l.
+// It deletes by type, `dash_type = ? AND svc_id IN (...)`: a (svc_id,
+// dash_type) IN list of a few thousand pairs made the range optimizer give up
+// the indexes and scan the whole dashboard.
 func (oDb *DB) DashboardObjectWithTypeDelete(ctx context.Context, l ...*DashboardObjectType) error {
 	defer logDuration("dashboardDeleteObject", time.Now())
-	if len(l) == 0 {
-		return nil
-	}
-	placeholders := strings.Repeat("(?,?),", len(l)-1) + "(?,?)"
-
-	query := fmt.Sprintf("DELETE FROM `dashboard` WHERE (`svc_id`, `dash_type`) IN (%s)", placeholders)
-	args := make([]any, 0, 2*len(l))
+	byType := make(map[string][]string)
+	var types []string
 	for _, v := range l {
-		args = append(args, v.ObjectID, v.DashType)
+		if _, ok := byType[v.DashType]; !ok {
+			types = append(types, v.DashType)
+		}
+		if !slices.Contains(byType[v.DashType], v.ObjectID) {
+			byType[v.DashType] = append(byType[v.DashType], v.ObjectID)
+		}
 	}
-
-	_, err := oDb.ExecContext(ctx, query, args...)
-	return err
+	var total int64
+	for _, dashType := range types {
+		ids := byType[dashType]
+		for start := 0; start < len(ids); start += dashboardDeleteBatch {
+			batch := ids[start:min(start+dashboardDeleteBatch, len(ids))]
+			args := make([]any, 0, len(batch)+1)
+			args = append(args, dashType)
+			for _, id := range batch {
+				args = append(args, id)
+			}
+			count, err := oDb.execCountContext(ctx,
+				"DELETE FROM `dashboard` WHERE `dash_type` = ? AND `svc_id` IN ("+Placeholders(len(batch))+")", args...)
+			if err != nil {
+				return fmt.Errorf("dashboardObjectWithTypeDelete %s: %w", dashType, err)
+			}
+			total += count
+		}
+	}
+	if total > 0 {
+		oDb.SetChange("dashboard")
+	}
+	return nil
 }
 
 // DashboardDeleteObjectWithType delete from dashboard where svc_id and dash_type match
@@ -820,21 +806,23 @@ func (oDb *DB) DashboardUpdateServiceConfigNotUpdated(ctx context.Context, maxAg
 }
 
 func (oDb *DB) DashboardUpdateInstancesNotUpdated(ctx context.Context, maxAge time.Duration) error {
+	monUpdated := lastSeen("m.mon_updated", "n.last_comm")
 	u := alertsUpsert{
 		source: `SELECT
 		  "service status not updated" AS dash_type,
-		  svc_id,
-		  IF(mon_svctype="PRD", 1, 0) AS dash_severity,
+		  m.svc_id,
+		  IF(m.mon_svctype="PRD", 1, 0) AS dash_severity,
 		  "" AS dash_fmt,
 		  "" AS dash_dict,
-		  mon_updated AS dash_created,
+		  ` + monUpdated + ` AS dash_created,
 		  "" AS dash_dict_md5,
-		  mon_svctype AS dash_env,
+		  m.mon_svctype AS dash_env,
 		  NOW() AS dash_updated,
-		  node_id,
+		  m.node_id,
 		  NULL AS dash_instance
-		FROM svcmon
-		WHERE mon_updated < DATE_SUB(NOW(), INTERVAL ? SECOND)`,
+		FROM svcmon m
+		LEFT JOIN nodes n ON n.node_id = m.node_id
+		WHERE ` + monUpdated + ` < DATE_SUB(NOW(), INTERVAL ? SECOND)`,
 		args:    []any{maxAgeSeconds(maxAge)},
 		columns: positionalAlertColumns,
 		update:  []string{"dash_updated = s.dash_updated"},
@@ -853,11 +841,12 @@ func (oDb *DB) DashboardUpdateInstancesNotUpdated(ctx context.Context, maxAge ti
 		    LEFT JOIN svcmon ON
 			dashboard.svc_id = svcmon.svc_id AND
 			dashboard.node_id = svcmon.node_id
+		    LEFT JOIN nodes n ON n.node_id = svcmon.node_id
 		    WHERE
 			dashboard.dash_type = "service status not updated" AND
 			dashboard.svc_id != "" AND
 			dashboard.node_id != "" AND
-			(svcmon.id IS NULL OR svcmon.mon_updated >= DATE_SUB(NOW(), INTERVAL ? SECOND))
+			(svcmon.id IS NULL OR ` + lastSeen("svcmon.mon_updated", "n.last_comm") + ` >= DATE_SUB(NOW(), INTERVAL ? SECOND))
 		)
 	`
 	if count, err := oDb.execCountContext(ctx, request, maxAgeSeconds(maxAge)); err != nil {
@@ -1112,7 +1101,7 @@ func (oDb *DB) DashboardUpdatePkgDiffForNode(ctx context.Context, nodeID string)
 				FROM svcmon
 				JOIN nodes ON svcmon.node_id = nodes.node_id
 				WHERE svcmon.svc_id = ?
-				AND svcmon.mon_updated > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
+				AND ` + lastSeen("svcmon.mon_updated", "nodes.last_comm") + ` > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
 				AND svcmon.mon_vmtype != ""
 				ORDER BY nodes.nodename
 			`
@@ -1123,7 +1112,7 @@ func (oDb *DB) DashboardUpdatePkgDiffForNode(ctx context.Context, nodeID string)
 				FROM svcmon
 				JOIN nodes ON svcmon.node_id = nodes.node_id
 				WHERE svcmon.svc_id = ?
-				AND svcmon.mon_updated > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
+				AND ` + lastSeen("svcmon.mon_updated", "nodes.last_comm") + ` > DATE_SUB(NOW(), INTERVAL 20 MINUTE)
 				AND svcmon.mon_vmtype = ""
 				ORDER BY nodes.nodename
 			`
@@ -1249,7 +1238,7 @@ func (oDb *DB) DashboardUpdatePkgDiffForNode(ctx context.Context, nodeID string)
 		SELECT svcmon.svc_id, svcmon.mon_svctype, svcmon.mon_vmtype
 		FROM svcmon
 		JOIN nodes ON svcmon.node_id = nodes.node_id
-		WHERE svcmon.node_id = ? AND svcmon.mon_updated > DATE_SUB(NOW(), INTERVAL 19 MINUTE)
+		WHERE svcmon.node_id = ? AND `+lastSeen("svcmon.mon_updated", "nodes.last_comm")+` > DATE_SUB(NOW(), INTERVAL 19 MINUTE)
 	`, nodeID)
 	if err != nil {
 		return fmt.Errorf("failed to query svcmon: %v", err)
