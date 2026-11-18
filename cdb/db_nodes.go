@@ -786,7 +786,11 @@ func (oDb *DB) UpdateNodeFields(ctx context.Context, nodeID string, fields map[s
 	}
 	query := "UPDATE nodes SET " + strings.Join(setClauses, ", ") + " WHERE node_id = ?"
 	args = append(args, nodeID)
-	if _, err := oDb.DB.ExecContext(ctx, query, args...); err != nil {
+	// Through ExecContext, which retries on a deadlock: a node registering
+	// again updates its cluster_id while the worker may write the nodes
+	// rows of its peer's first feeds, and the deadlock failed the
+	// registration with a 500 at once.
+	if _, err := oDb.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("UpdateNodeFields: %w", err)
 	}
 	oDb.SetChange("nodes")
