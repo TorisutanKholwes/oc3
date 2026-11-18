@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 
+	"github.com/opensvc/oc3/cdb"
 	"github.com/opensvc/oc3/server"
 	"github.com/opensvc/oc3/util/logkey"
 )
@@ -143,20 +144,16 @@ func (a *Api) postAuthNodeEnroll(c echo.Context, log *slog.Logger, body server.P
 		clusterID:       clusterID,
 	}
 
-	// Committed here rather than by an endTx, which only logs a failed
-	// commit: the joining node must not get a uuid the collector does not
-	// have.
-	tx, _, _, err := a.ODB.BeginTxWithControl(ctx, log, &sql.TxOptions{})
-	if err != nil {
-		log.Error("cannot start transaction", logkey.Error, err)
-		return JSONProblemf(c, http.StatusInternalServerError, "cannot enroll node")
-	}
-	nodeID, nodeUUID, err := enrollNode(ctx, tx, e, uuid.NewString)
-	if err == nil {
-		err = tx.Commit()
-	} else {
-		_ = tx.Rollback()
-	}
+	// In a transaction run again on a deadlock: the update of the cluster id
+	// of the joining node may meet the worker writing the nodes rows of the
+	// first feeds of its peers. RunInTx returns the error of a failed commit:
+	// the joining node must not get a uuid the collector does not have.
+	var nodeID, nodeUUID string
+	err = a.ODB.RunInTx(ctx, &sql.TxOptions{}, func(tx *cdb.DB) error {
+		var err error
+		nodeID, nodeUUID, err = enrollNode(ctx, tx, e, uuid.NewString)
+		return err
+	})
 	switch {
 	case errors.Is(err, errEnrollNotRegistered):
 		log.Info("enroll refused", "nodename", e.nodename, logkey.Error, err)
