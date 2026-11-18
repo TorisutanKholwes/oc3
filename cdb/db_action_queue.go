@@ -31,7 +31,7 @@ func (oDb *DB) GetActionByID(ctx context.Context, id int64) (ActionQueueRow, boo
 
 func (oDb *DB) DeleteAction(ctx context.Context, id int64) (int64, error) {
 	const query = "DELETE FROM action_queue WHERE id = ?"
-	res, err := oDb.DB.ExecContext(ctx, query, id)
+	res, err := oDb.ExecContext(ctx, query, id)
 	if err != nil {
 		return 0, fmt.Errorf("deleteAction: %w", err)
 	}
@@ -63,7 +63,7 @@ func (oDb *DB) UpdateActionStatus(ctx context.Context, id int64, status string, 
 	if resetDequeued {
 		query = "UPDATE action_queue SET status = ?, date_dequeued = 0 WHERE id = ?"
 	}
-	if _, err := oDb.DB.ExecContext(ctx, query, status, id); err != nil {
+	if _, err := oDb.ExecContext(ctx, query, status, id); err != nil {
 		return fmt.Errorf("updateActionStatus: %w", err)
 	}
 	oDb.SetChange("action_queue")

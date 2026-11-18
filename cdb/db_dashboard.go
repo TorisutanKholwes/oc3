@@ -127,7 +127,7 @@ func (oDb *DB) GetAlertOwner(ctx context.Context, id int64) (svcID, nodeID strin
 
 func (oDb *DB) DeleteAlert(ctx context.Context, id int64) (int64, error) {
 	const query = "DELETE FROM dashboard WHERE id = ?"
-	res, err := oDb.DB.ExecContext(ctx, query, id)
+	res, err := oDb.ExecContext(ctx, query, id)
 	if err != nil {
 		return 0, fmt.Errorf("deleteAlert: %w", err)
 	}
@@ -247,7 +247,7 @@ func (oDb *DB) UpdateAlertFields(ctx context.Context, id int64, fields map[strin
 	}
 	query := "UPDATE dashboard SET " + strings.Join(setClauses, ", ") + " WHERE id = ?"
 	args = append(args, id)
-	if _, err := oDb.DB.ExecContext(ctx, query, args...); err != nil {
+	if _, err := oDb.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("updateAlertFields: %w", err)
 	}
 	oDb.SetChange("dashboard")
@@ -276,7 +276,7 @@ func (oDb *DB) UpsertUpdateAlert(ctx context.Context, id int64, dashFmt, dashDic
 	const query = `UPDATE dashboard
 		SET dash_updated = NOW(), dash_fmt = ?, dash_dict = ?, dash_env = ?, dash_severity = ?
 		WHERE id = ?`
-	if _, err := oDb.DB.ExecContext(ctx, query, dashFmt, dashDict, dashEnv, dashSeverity, id); err != nil {
+	if _, err := oDb.ExecContext(ctx, query, dashFmt, dashDict, dashEnv, dashSeverity, id); err != nil {
 		return fmt.Errorf("upsertUpdateAlert: %w", err)
 	}
 	oDb.SetChange("dashboard")
@@ -296,7 +296,7 @@ func (oDb *DB) InsertAlert(ctx context.Context, fields map[string]any) (int64, e
 		args = append(args, val)
 	}
 	query := "INSERT INTO dashboard (" + strings.Join(cols, ", ") + ") VALUES (" + strings.Join(placeholders, ", ") + ")"
-	res, err := oDb.DB.ExecContext(ctx, query, args...)
+	res, err := oDb.ExecContext(ctx, query, args...)
 	if err != nil {
 		return 0, fmt.Errorf("insertAlert: %w", err)
 	}

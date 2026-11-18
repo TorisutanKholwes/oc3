@@ -128,7 +128,7 @@ func (oDb *DB) DefaultGroupOrManager(ctx context.Context, userID *int64) (int64,
 // CreateCompRuleset inserts a ruleset, published to and under the responsibility
 // of groupID, as create_ruleset() and add_default_teams().
 func (oDb *DB) CreateCompRuleset(ctx context.Context, name, rtype, public string, groupID int64) (int64, error) {
-	res, err := oDb.DB.ExecContext(ctx, "INSERT INTO comp_rulesets (ruleset_name, ruleset_type, ruleset_public) VALUES (?, ?, ?)",
+	res, err := oDb.ExecContext(ctx, "INSERT INTO comp_rulesets (ruleset_name, ruleset_type, ruleset_public) VALUES (?, ?, ?)",
 		name, rtype, public)
 	if err != nil {
 		return 0, fmt.Errorf("createCompRuleset: %w", err)
@@ -146,7 +146,7 @@ func (oDb *DB) CreateCompRuleset(ctx context.Context, name, rtype, public string
 
 func (oDb *DB) addRulesetTeams(ctx context.Context, rulesetID, groupID int64) error {
 	for _, table := range []string{"comp_ruleset_team_responsible", "comp_ruleset_team_publication"} {
-		if _, err := oDb.DB.ExecContext(ctx, "INSERT INTO "+table+" (ruleset_id, group_id) VALUES (?, ?)", rulesetID, groupID); err != nil {
+		if _, err := oDb.ExecContext(ctx, "INSERT INTO "+table+" (ruleset_id, group_id) VALUES (?, ?)", rulesetID, groupID); err != nil {
 			return fmt.Errorf("addRulesetTeams: %w", err)
 		}
 		oDb.SetChange(table)
@@ -167,7 +167,7 @@ func (oDb *DB) UpdateCompRuleset(ctx context.Context, id int64, fields map[strin
 		args = append(args, fields[k])
 	}
 	args = append(args, id)
-	if _, err := oDb.DB.ExecContext(ctx, "UPDATE comp_rulesets SET "+strings.Join(sets, ", ")+" WHERE id = ?", args...); err != nil {
+	if _, err := oDb.ExecContext(ctx, "UPDATE comp_rulesets SET "+strings.Join(sets, ", ")+" WHERE id = ?", args...); err != nil {
 		return fmt.Errorf("updateCompRuleset: %w", err)
 	}
 	oDb.SetChange("comp_rulesets")
@@ -193,7 +193,7 @@ func (oDb *DB) DeleteCompRuleset(ctx context.Context, id int64) error {
 		if strings.Count(q.cond, "?") == 2 {
 			args = append(args, id)
 		}
-		if _, err := oDb.DB.ExecContext(ctx, "DELETE FROM "+q.table+" WHERE "+q.cond, args...); err != nil {
+		if _, err := oDb.ExecContext(ctx, "DELETE FROM "+q.table+" WHERE "+q.cond, args...); err != nil {
 			return fmt.Errorf("deleteCompRuleset: %s: %w", q.table, err)
 		}
 		oDb.SetChange(q.table)
@@ -222,7 +222,7 @@ func (oDb *DB) CloneCompRuleset(ctx context.Context, id int64, author string, gr
 	} else if found {
 		return 0, "", fmt.Errorf("%w: a ruleset named %s already exists", ErrCompConflict, cloneName)
 	}
-	res, err := oDb.DB.ExecContext(ctx, "INSERT INTO comp_rulesets (ruleset_name, ruleset_type, ruleset_public) VALUES (?, ?, ?)",
+	res, err := oDb.ExecContext(ctx, "INSERT INTO comp_rulesets (ruleset_name, ruleset_type, ruleset_public) VALUES (?, ?, ?)",
 		cloneName, rtype, public)
 	if err != nil {
 		return 0, "", fmt.Errorf("cloneCompRuleset: %w", err)
@@ -248,7 +248,7 @@ func (oDb *DB) CloneCompRuleset(ctx context.Context, id int64, author string, gr
 			" SELECT ?, fset_id FROM comp_rulesets_filtersets WHERE ruleset_id = ? LIMIT 1", []any{newID, id}})
 	}
 	for _, st := range stmts {
-		if _, err := oDb.DB.ExecContext(ctx, st.query, st.args...); err != nil {
+		if _, err := oDb.ExecContext(ctx, st.query, st.args...); err != nil {
 			return 0, "", fmt.Errorf("cloneCompRuleset: %w", err)
 		}
 	}
@@ -333,7 +333,7 @@ func (oDb *DB) CompRulesetsChains(ctx context.Context) error {
 		walk([]int64{id})
 	}
 
-	if _, err := oDb.DB.ExecContext(ctx, "DELETE FROM comp_rulesets_chains"); err != nil {
+	if _, err := oDb.ExecContext(ctx, "DELETE FROM comp_rulesets_chains"); err != nil {
 		return fmt.Errorf("compRulesetsChains: %w", err)
 	}
 	for start := 0; start < len(chains); start += 500 {
@@ -344,7 +344,7 @@ func (oDb *DB) CompRulesetsChains(ctx context.Context) error {
 			values = append(values, "(?, ?, ?, ?)")
 			args = append(args, c.head, c.tail, c.length, c.text)
 		}
-		if _, err := oDb.DB.ExecContext(ctx, "INSERT INTO comp_rulesets_chains (head_rset_id, tail_rset_id, chain_len, chain) VALUES "+
+		if _, err := oDb.ExecContext(ctx, "INSERT INTO comp_rulesets_chains (head_rset_id, tail_rset_id, chain_len, chain) VALUES "+
 			strings.Join(values, ", ")+" ON DUPLICATE KEY UPDATE chain_len = VALUES(chain_len), chain = VALUES(chain)", args...); err != nil {
 			return fmt.Errorf("compRulesetsChains: %w", err)
 		}

@@ -855,7 +855,7 @@ func (oDb *DB) DeleteNodesCascade(ctx context.Context, nodeIDs []string) error {
 func (oDb *DB) DetachNodenameFromCluster(ctx context.Context, nodename, clusterID, keepNodeID string) error {
 	defer logDuration("DetachNodenameFromCluster", time.Now())
 	const query = `UPDATE nodes SET cluster_id = '', updated = NOW() WHERE nodename = ? AND cluster_id = ? AND node_id <> ?`
-	result, err := oDb.DB.ExecContext(ctx, query, nodename, clusterID, keepNodeID)
+	result, err := oDb.ExecContext(ctx, query, nodename, clusterID, keepNodeID)
 	if err != nil {
 		return fmt.Errorf("DetachNodenameFromCluster: %w", err)
 	}
