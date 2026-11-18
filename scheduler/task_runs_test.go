@@ -119,8 +119,25 @@ func TestDeclareAndRecordRuns(t *testing.T) {
 		t.Fatalf("declared\n got %v\nwant %v", got, want)
 	}
 
+	// The states read by the scheduler accept the tasks declared and never
+	// run, whose last run is NULL.
+	sched := &Scheduler{DB: db}
+	states, err := sched.GetStateMap(ctx)
+	if err != nil {
+		t.Fatalf("states: %v", err)
+	}
+	if !states["t1"].IsDisabled || !states["t1: ok"].LastRunAt.IsZero() || len(states) != 4 {
+		t.Errorf("states %v", states)
+	}
 	task := tasks[0]
 	task.db = db
+	if st, err := task.GetState(ctx); err != nil || !st.IsDisabled {
+		t.Errorf("state of t1: %v, %v", st, err)
+	}
+	sub := Task{name: "t1: ok", db: db}
+	if st, err := sub.GetState(ctx); err != nil || !st.LastRunAt.IsZero() {
+		t.Errorf("state of a subtask never run: %v, %v", st, err)
+	}
 	if err := task.Exec(ctx); !errors.Is(err, fail) {
 		t.Fatalf("exec: %v", err)
 	}

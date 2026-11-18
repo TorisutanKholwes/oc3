@@ -384,10 +384,15 @@ func (t *Task) GetState(ctx context.Context) (State, error) {
 
 	query := "SELECT last_run_at,is_disabled FROM oc3_scheduler WHERE task_name = ? ORDER BY id DESC LIMIT 1"
 
-	err := t.db.QueryRowContext(ctx, query, t.name).Scan(&state.LastRunAt, &state.IsDisabled)
+	// A task declared at the start of the scheduler and never run has no last
+	// run.
+	var lastRunAt sql.NullTime
+	var isDisabled sql.NullBool
+	err := t.db.QueryRowContext(ctx, query, t.name).Scan(&lastRunAt, &isDisabled)
 	if err == sql.ErrNoRows {
 		return state, nil
 	}
+	state.LastRunAt, state.IsDisabled = lastRunAt.Time, isDisabled.Bool
 	return state, err
 }
 
