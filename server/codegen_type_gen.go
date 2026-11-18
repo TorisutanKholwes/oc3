@@ -6627,6 +6627,98 @@ type SavesSummaryResponse struct {
 	TotalSize int64 `json:"total_size"`
 }
 
+// SchedulerRunListResponse defines model for SchedulerRunListResponse.
+type SchedulerRunListResponse struct {
+	Data SchedulerRunListResponse_Data `json:"data"`
+	Meta *ListMeta                     `json:"meta,omitempty"`
+}
+
+// SchedulerRunListResponseData0 defines model for .
+type SchedulerRunListResponseData0 = []SchedulerRunRow
+
+// SchedulerRunListResponseData1 defines model for .
+type SchedulerRunListResponseData1 map[string]map[string]int
+
+// SchedulerRunListResponse_Data defines model for SchedulerRunListResponse.Data.
+type SchedulerRunListResponse_Data struct {
+	union json.RawMessage
+}
+
+// SchedulerRunRow A run of a scheduler task or subtask. Every property is optional: the
+// `props` query parameter selects which columns the server returns.
+type SchedulerRunRow struct {
+	BeginAt    *string `json:"begin_at,omitempty"`
+	DurationMs *int    `json:"duration_ms,omitempty"`
+	Error      *string `json:"error,omitempty"`
+	Id         *int    `json:"id,omitempty"`
+
+	// Status ok or failed.
+	Status   *string `json:"status,omitempty"`
+	TaskName *string `json:"task_name,omitempty"`
+}
+
+// SchedulerTaskInput defines model for SchedulerTaskInput.
+type SchedulerTaskInput struct {
+	IsDisabled bool `json:"is_disabled"`
+}
+
+// SchedulerTaskListResponse defines model for SchedulerTaskListResponse.
+type SchedulerTaskListResponse struct {
+	Data SchedulerTaskListResponse_Data `json:"data"`
+	Meta *ListMeta                      `json:"meta,omitempty"`
+}
+
+// SchedulerTaskListResponseData0 defines model for .
+type SchedulerTaskListResponseData0 = []SchedulerTaskRow
+
+// SchedulerTaskListResponseData1 defines model for .
+type SchedulerTaskListResponseData1 map[string]map[string]int
+
+// SchedulerTaskListResponse_Data defines model for SchedulerTaskListResponse.Data.
+type SchedulerTaskListResponse_Data struct {
+	union json.RawMessage
+}
+
+// SchedulerTaskRow A task or a subtask of the scheduler. Every property is optional: the
+// `props` query parameter selects which columns the server returns. The
+// dates are those of the database, as text, empty when unset.
+type SchedulerTaskRow struct {
+	AvgDurationMs24h *int `json:"avg_duration_ms_24h,omitempty"`
+
+	// Declared Whether the scheduler declared it at its last start; false for a task the code does not hold any more.
+	Declared       *bool   `json:"declared,omitempty"`
+	Failures24h    *int    `json:"failures_24h,omitempty"`
+	Id             *int    `json:"id,omitempty"`
+	IsDisabled     *bool   `json:"is_disabled,omitempty"`
+	LastBeginAt    *string `json:"last_begin_at,omitempty"`
+	LastDurationMs *int    `json:"last_duration_ms,omitempty"`
+	LastError      *string `json:"last_error,omitempty"`
+
+	// LastRunAt When the scheduler last started the task, which the next run follows by its period. Empty for a subtask.
+	LastRunAt *string `json:"last_run_at,omitempty"`
+
+	// LastStatus ok or failed; empty before the first recorded run.
+	LastStatus       *string `json:"last_status,omitempty"`
+	MaxDurationMs24h *int    `json:"max_duration_ms_24h,omitempty"`
+
+	// NextRunAt When the scheduler runs an enabled task next. Empty for a subtask or a disabled task.
+	NextRunAt *string `json:"next_run_at,omitempty"`
+
+	// Parent The task running this subtask, empty for a task.
+	Parent *string `json:"parent,omitempty"`
+
+	// PeriodS Seconds between two runs, the period of its task for a subtask; 0 when not scheduled.
+	PeriodS  *int    `json:"period_s,omitempty"`
+	Runs24h  *int    `json:"runs_24h,omitempty"`
+	TaskDesc *string `json:"task_desc,omitempty"`
+
+	// TaskName The name of the task, "<task>: <subtask>" for a subtask.
+	TaskName *string `json:"task_name,omitempty"`
+
+	// TimeoutS Seconds a run may last.
+	TimeoutS *int `json:"timeout_s,omitempty"`
+}
+
 // SearchGroup The objects of one kind matching a search.
 type SearchGroup struct {
 	// Error Set when the kind could not be searched.
@@ -7630,6 +7722,9 @@ type InPathOrchestrationRunId = int
 
 // InPathRsetId defines model for inPathRsetId.
 type InPathRsetId = string
+
+// InPathSchedulerTaskName defines model for inPathSchedulerTaskName.
+type InPathSchedulerTaskName = string
 
 // InQueryAIBackend an AI backend of the agent, om3 for a cluster, oc3 for the collector
 type InQueryAIBackend = AIBackend
@@ -15930,6 +16025,124 @@ type GetSaveParams struct {
 	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
 }
 
+// GetSchedulerRunsParams defines parameters for GetSchedulerRuns.
+type GetSchedulerRunsParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// GetSchedulerTasksParams defines parameters for GetSchedulerTasks.
+type GetSchedulerTasksParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+
+	// Limit The maximum number of entries to return. 0 means no limit.
+	Limit *InQueryLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Skip the first entries of the data cursor.
+	Offset *InQueryOffset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Meta Include metadata in the response. Enabled by default. Use false or 0 to omit
+	// the meta field. The metadata of a list carries its total number of rows
+	// without pagination (total), as well as the rows returned (count), the offset
+	// and the limit.
+	Meta *InQueryMeta `form:"meta,omitempty" json:"meta,omitempty"`
+
+	// Stats With "1" or "true", the response counts the distinct values of each
+	// selected property instead of listing the rows: `data` maps each property
+	// to an object of value → number of rows ("empty" for a null or blank
+	// value), over the whole selection (access control, filters and session
+	// filterset applied, `offset` ignored). `limit`, when given, caps the
+	// number of values returned per property, the most frequent first; without
+	// it every value is returned. `meta.total` is the number of rows,
+	// `meta.distinct` the number of distinct values of each property, and
+	// `meta.other` the number of rows whose value was left out by the limit.
+	// A count taking longer than 5 seconds is refused with a 400, asking to
+	// narrow the selection.
+	Stats *InQueryStats `form:"stats,omitempty" json:"stats,omitempty"`
+
+	// Orderby Comma-separated list of properties to sort by. Prefix a property with - for descending order (e.g. orderby=nodename,-app).
+	Orderby *InQueryOrderby `form:"orderby,omitempty" json:"orderby,omitempty"`
+
+	// Filter Column filter, repeatable; several filters combine with AND. Each value is
+	// `prop:expr`, `prop` being a property of the list (joined ones included, as
+	// for orderby) and `expr` one of:
+	//   - text: case-insensitive match anywhere in the value;
+	//   - `~regex`: regular expression (RE2 syntax), case-insensitive;
+	//   - `in:a,b,c`: one of the listed values;
+	//   - `eq:v`, `ne:v`: equal, not equal;
+	//   - `gt:v`, `gte:v`, `lt:v`, `lte:v`: comparisons, for numbers and dates;
+	//     a date may be relative to now, `-` then a duration in weeks, days,
+	//     hours, minutes and seconds: `lt:-15m` keeps the dates older than 15
+	//     minutes, `gte:-1d12h` those of the last day and a half;
+	//   - `empty`: no value;
+	//   - `!expr`: the inverse of any of the above, that is the rows `expr` leaves
+	//     out, those without a value included: `!dev`, `!~^dev`, `!in:a,b`,
+	//     `!empty` (any value).
+	// An unknown property, a property without a column, or an invalid regular
+	// expression is answered with 400.
+	Filter *InQueryFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// Groupby Comma-separated list of properties to group the result by (e.g. groupby=app,svcname).
+	Groupby *InQueryGroupby `form:"groupby,omitempty" json:"groupby,omitempty"`
+}
+
+// GetSchedulerTaskParams defines parameters for GetSchedulerTask.
+type GetSchedulerTaskParams struct {
+	// Props A list of properties to include in each data dictionnary.
+	Props *InQueryProps `form:"props,omitempty" json:"props,omitempty"`
+}
+
 // GetSearchParams defines parameters for GetSearch.
 type GetSearchParams struct {
 	// Q The text to search for.
@@ -18682,6 +18895,9 @@ type PostSafeFileNameJSONRequestBody PostSafeFileNameJSONBody
 
 // PostSafeFileUploadMultipartRequestBody defines body for PostSafeFileUpload for multipart/form-data ContentType.
 type PostSafeFileUploadMultipartRequestBody PostSafeFileUploadMultipartBody
+
+// PutSchedulerTaskJSONRequestBody defines body for PutSchedulerTask for application/json ContentType.
+type PutSchedulerTaskJSONRequestBody = SchedulerTaskInput
 
 // DeleteServicesJSONRequestBody defines body for DeleteServices for application/json ContentType.
 type DeleteServicesJSONRequestBody DeleteServicesJSONBody
@@ -22168,6 +22384,130 @@ func (t SaveListResponse_Data) MarshalJSON() ([]byte, error) {
 }
 
 func (t *SaveListResponse_Data) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSchedulerRunListResponseData0 returns the union data inside the SchedulerRunListResponse_Data as a SchedulerRunListResponseData0
+func (t SchedulerRunListResponse_Data) AsSchedulerRunListResponseData0() (SchedulerRunListResponseData0, error) {
+	var body SchedulerRunListResponseData0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSchedulerRunListResponseData0 overwrites any union data inside the SchedulerRunListResponse_Data as the provided SchedulerRunListResponseData0
+func (t *SchedulerRunListResponse_Data) FromSchedulerRunListResponseData0(v SchedulerRunListResponseData0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSchedulerRunListResponseData0 performs a merge with any union data inside the SchedulerRunListResponse_Data, using the provided SchedulerRunListResponseData0
+func (t *SchedulerRunListResponse_Data) MergeSchedulerRunListResponseData0(v SchedulerRunListResponseData0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSchedulerRunListResponseData1 returns the union data inside the SchedulerRunListResponse_Data as a SchedulerRunListResponseData1
+func (t SchedulerRunListResponse_Data) AsSchedulerRunListResponseData1() (SchedulerRunListResponseData1, error) {
+	var body SchedulerRunListResponseData1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSchedulerRunListResponseData1 overwrites any union data inside the SchedulerRunListResponse_Data as the provided SchedulerRunListResponseData1
+func (t *SchedulerRunListResponse_Data) FromSchedulerRunListResponseData1(v SchedulerRunListResponseData1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSchedulerRunListResponseData1 performs a merge with any union data inside the SchedulerRunListResponse_Data, using the provided SchedulerRunListResponseData1
+func (t *SchedulerRunListResponse_Data) MergeSchedulerRunListResponseData1(v SchedulerRunListResponseData1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SchedulerRunListResponse_Data) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SchedulerRunListResponse_Data) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSchedulerTaskListResponseData0 returns the union data inside the SchedulerTaskListResponse_Data as a SchedulerTaskListResponseData0
+func (t SchedulerTaskListResponse_Data) AsSchedulerTaskListResponseData0() (SchedulerTaskListResponseData0, error) {
+	var body SchedulerTaskListResponseData0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSchedulerTaskListResponseData0 overwrites any union data inside the SchedulerTaskListResponse_Data as the provided SchedulerTaskListResponseData0
+func (t *SchedulerTaskListResponse_Data) FromSchedulerTaskListResponseData0(v SchedulerTaskListResponseData0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSchedulerTaskListResponseData0 performs a merge with any union data inside the SchedulerTaskListResponse_Data, using the provided SchedulerTaskListResponseData0
+func (t *SchedulerTaskListResponse_Data) MergeSchedulerTaskListResponseData0(v SchedulerTaskListResponseData0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSchedulerTaskListResponseData1 returns the union data inside the SchedulerTaskListResponse_Data as a SchedulerTaskListResponseData1
+func (t SchedulerTaskListResponse_Data) AsSchedulerTaskListResponseData1() (SchedulerTaskListResponseData1, error) {
+	var body SchedulerTaskListResponseData1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSchedulerTaskListResponseData1 overwrites any union data inside the SchedulerTaskListResponse_Data as the provided SchedulerTaskListResponseData1
+func (t *SchedulerTaskListResponse_Data) FromSchedulerTaskListResponseData1(v SchedulerTaskListResponseData1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSchedulerTaskListResponseData1 performs a merge with any union data inside the SchedulerTaskListResponse_Data, using the provided SchedulerTaskListResponseData1
+func (t *SchedulerTaskListResponse_Data) MergeSchedulerTaskListResponseData1(v SchedulerTaskListResponseData1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SchedulerTaskListResponse_Data) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SchedulerTaskListResponse_Data) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

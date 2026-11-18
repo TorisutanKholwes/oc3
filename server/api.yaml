@@ -8927,6 +8927,147 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+  /scheduler/tasks:
+    get:
+      operationId: GetSchedulerTasks
+      description: |
+        List the tasks of the scheduler and their subtasks, as the scheduler
+        declared them at its last start: a subtask is named
+        "<task>: <subtask>" and has its task as parent. Each has its period
+        and timeout in seconds, whether it is disabled, its last run (status,
+        begin, duration, error), its next run for an enabled task, and the
+        count, failures and durations of its runs of the last 24 hours.
+        Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerTaskListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /scheduler/tasks/{task_name}:
+    get:
+      operationId: GetSchedulerTask
+      description: A task or a subtask of the scheduler. Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inPathSchedulerTaskName'
+        - $ref: '#/components/parameters/inQueryProps'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerTaskListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    put:
+      operationId: PutSchedulerTask
+      description: |
+        Disable or enable a task of the scheduler. The scheduler reads the
+        flag every 5 seconds: it stops a disabled task, interrupting a run in
+        progress, and starts an enabled one, which runs at the end of its
+        period from its last run. A subtask runs with its task and can not be
+        disabled alone. Requires the Manager privilege. The action is logged
+        in the collector's log.
+      parameters:
+        - $ref: '#/components/parameters/inPathSchedulerTaskName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulerTaskInput'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerTaskListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /scheduler/runs:
+    get:
+      operationId: GetSchedulerRuns
+      description: |
+        List the runs of the scheduler tasks and subtasks of the last 7 days,
+        the last first: filter on task_name for the runs of a task, on status
+        (ok or failed) for the failures. Requires a user authentication.
+      parameters:
+        - $ref: '#/components/parameters/inQueryProps'
+        - $ref: '#/components/parameters/inQueryLimit'
+        - $ref: '#/components/parameters/inQueryOffset'
+        - $ref: '#/components/parameters/inQueryMeta'
+        - $ref: '#/components/parameters/inQueryStats'
+        - $ref: '#/components/parameters/inQueryOrderby'
+        - $ref: '#/components/parameters/inQueryFilter'
+        - $ref: '#/components/parameters/inQueryGroupby'
+      tags:
+        - collector
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerRunListResponse'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /sysreport/secure_patterns:
     get:
       operationId: GetSysreportSecurePatterns
@@ -31196,6 +31337,125 @@ components:
           items:
             $ref: '#/components/schemas/SearchGroup'
 
+    SchedulerTaskRow:
+      type: object
+      description: |
+        A task or a subtask of the scheduler. Every property is optional: the
+        `props` query parameter selects which columns the server returns. The
+        dates are those of the database, as text, empty when unset.
+      properties:
+        id:
+          type: integer
+        task_name:
+          type: string
+          description: 'The name of the task, "<task>: <subtask>" for a subtask.'
+        parent:
+          type: string
+          description: The task running this subtask, empty for a task.
+        task_desc:
+          type: string
+        period_s:
+          type: integer
+          description: Seconds between two runs, the period of its task for a subtask; 0 when not scheduled.
+        timeout_s:
+          type: integer
+          description: Seconds a run may last.
+        is_disabled:
+          type: boolean
+        declared:
+          type: boolean
+          description: Whether the scheduler declared it at its last start; false for a task the code does not hold any more.
+        last_run_at:
+          type: string
+          description: When the scheduler last started the task, which the next run follows by its period. Empty for a subtask.
+        next_run_at:
+          type: string
+          description: When the scheduler runs an enabled task next. Empty for a subtask or a disabled task.
+        last_status:
+          type: string
+          description: ok or failed; empty before the first recorded run.
+        last_begin_at:
+          type: string
+        last_duration_ms:
+          type: integer
+          nullable: true
+        last_error:
+          type: string
+        runs_24h:
+          type: integer
+        failures_24h:
+          type: integer
+        avg_duration_ms_24h:
+          type: integer
+          nullable: true
+        max_duration_ms_24h:
+          type: integer
+          nullable: true
+
+    SchedulerTaskListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/SchedulerTaskRow'
+            - type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: integer
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+
+    SchedulerTaskInput:
+      type: object
+      required:
+        - is_disabled
+      properties:
+        is_disabled:
+          type: boolean
+
+    SchedulerRunRow:
+      type: object
+      description: |
+        A run of a scheduler task or subtask. Every property is optional: the
+        `props` query parameter selects which columns the server returns.
+      properties:
+        id:
+          type: integer
+        task_name:
+          type: string
+        begin_at:
+          type: string
+        duration_ms:
+          type: integer
+        status:
+          type: string
+          description: ok or failed.
+        error:
+          type: string
+
+    SchedulerRunListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/SchedulerRunRow'
+            - type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: integer
+        meta:
+          $ref: '#/components/schemas/ListMeta'
+
     SysreportSecurePatternRow:
       type: object
       description: |
@@ -33789,6 +34049,13 @@ components:
       schema:
         type: string
 
+    inPathSchedulerTaskName:
+      in: path
+      name: task_name
+      required: true
+      description: 'The name of a scheduler task, "<task>: <subtask>" for a subtask, url-encoded.'
+      schema:
+        type: string
     inQueryFilter:
       in: query
       name: filter

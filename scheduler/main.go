@@ -145,6 +145,10 @@ func (t *Scheduler) Run() error {
 
 	signal.Notify(t.sigC, os.Interrupt, syscall.SIGTERM)
 
+	if err := Tasks.Declare(context.Background(), t.DB); err != nil {
+		t.Warnf("declare the tasks: %s", err)
+	}
+
 	t.monitor()
 
 	return nil
