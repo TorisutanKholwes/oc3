@@ -815,6 +815,8 @@ var nodeCascadeTables = []string{
 	"resmon_log_last",
 	"svcmon_log",
 	"svcmon_log_last",
+	"node_bootstrap_tokens",
+	"cluster_enrollments",
 }
 
 // DeleteNodeCascade deletes a node and all its related data in other tables

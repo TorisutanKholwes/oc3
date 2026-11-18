@@ -2471,6 +2471,43 @@ paths:
       tags:
         - auth
 
+  /auth/node/bootstrap:
+    post:
+      operationId: PostAuthNodeBootstrap
+      description: |
+        A node being provisioned trades the bootstrap token issued for it
+        (POST /nodes/{node_id}/bootstrap_token) for its collector credentials
+        and the configuration of its declared cluster. The token is the
+        credential: it is used once, for the nodename it was issued for.
+
+        The first node of a cluster without seed is elected seed: it creates the
+        cluster. The others join it, enrolled by a member (POST
+        /clusters/{cluster_id}/enrollments). The uuid returned replaces any
+        previous registration of the node.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeBootstrapRequest'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeBootstrap'
+        400:
+          $ref: '#/components/responses/400'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - { }
+
   /auth/backchannel-logout:
     post:
       operationId: PostAuthBackchannelLogout
@@ -8480,6 +8517,45 @@ paths:
         - basicAuth: [ ]
         - bearerAuth: [ ]
 
+    post:
+      operationId: PostClusters
+      description: |
+        Declare a cluster the collector provisions: its name, the app of its
+        nodes and its heartbeats. Without cluster_id a new cluster is declared,
+        its id generated, its first bootstrapped node creating it; with the id
+        of a cluster reporting already, its nodes are the seed and every node
+        bootstrapped joins it. Declare its nodes with POST /nodes (cluster_id),
+        then issue their tokens (POST /nodes/{node_id}/bootstrap_token).
+        Manager or NodeManager.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterDeclarationInput'
+      tags:
+        - provisioning
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterDeclaration'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
   /clusters/{cluster_id}:
     get:
       operationId: GetCluster
@@ -8510,6 +8586,358 @@ paths:
       security:
         - basicAuth: [ ]
         - bearerAuth: [ ]
+
+  /clusters/{cluster_id}/declaration:
+    get:
+      operationId: GetClusterDeclaration
+      description: |
+        The declaration of a cluster: what the collector provisions its nodes
+        with (name, app, heartbeats) and the node elected to create it, the
+        seed. Manager or NodeManager.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterDeclaration'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    put:
+      operationId: PutClusterDeclaration
+      description: |
+        Change the app and the heartbeats of a declared cluster. The nodes
+        already bootstrapped keep the configuration they were given.
+        Manager or NodeManager.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterDeclarationUpdate'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterDeclaration'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    delete:
+      operationId: DeleteClusterDeclaration
+      description: |
+        Delete the declaration of a cluster, its unused bootstrap tokens and
+        its enrollments. The cluster, its nodes and their registrations stay.
+        Manager or NodeManager.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      tags:
+        - provisioning
+      responses:
+        204:
+          description: Deleted
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /cluster_declarations:
+    get:
+      operationId: GetClusterDeclarations
+      description: |
+        The declared clusters, by name, with their nodes declared and reporting
+        and their pending enrollments. Manager or NodeManager.
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterDeclarationList'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /clusters/{cluster_id}/declaration/nodes:
+    get:
+      operationId: GetClusterDeclarationNodes
+      description: |
+        The nodes of a declared cluster, those the collector has with its
+        cluster_id or bootstrapped into it, with their last bootstrap token and
+        whether they report. Manager or NodeManager.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterDeclarationNodeList'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostClusterDeclarationNode
+      description: |
+        Declare a node of a declared cluster: the collector creates it with the
+        cluster_id, the app given or the one of the declaration, the team of the
+        caller. A node of that name in the cluster already is returned as is;
+        one in another cluster is refused. Manager or NodeManager.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterDeclarationNodeInput'
+      tags:
+        - provisioning
+      responses:
+        201:
+          description: Created, or found in the cluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterDeclarationNode'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /clusters/{cluster_id}/enrollments:
+    get:
+      operationId: GetClusterEnrollments
+      description: |
+        The last 100 enrollments of nodes into a declared cluster, newest first.
+        A user who sees the cluster (see GET /clusters), or a node of it.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterEnrollmentList'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+    post:
+      operationId: PostClusterEnrollment
+      description: |
+        A bootstrapped node asks to join its declared cluster. It hands a token
+        of the join role its daemon created: a member of the cluster claims the
+        enrollment and enrolls the node with it (om3 POST /api/cluster/enroll).
+        The token is kept in the cache only, until the enrollment expires
+        (15 minutes). A pending enrollment of the same node is replaced.
+
+        The caller is the joining node, authenticated by its credentials; its
+        cluster in the collector must be the one of the path, and it must not be
+        the seed of the cluster.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterEnrollmentRequest'
+      tags:
+        - provisioning
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterEnrollment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+
+  /clusters/{cluster_id}/enrollments/claim:
+    post:
+      operationId: PostClusterEnrollmentClaim
+      description: |
+        A member of the cluster claims the oldest pending enrollment of another
+        node, with its join token, to enroll it. 204 when none is pending.
+        The caller is a node, its cluster in the collector the one of the path.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: Claimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterEnrollmentClaim'
+        204:
+          description: No pending enrollment
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+
+  /clusters/{cluster_id}/enrollments/{enrollment_id}:
+    get:
+      operationId: GetClusterEnrollment
+      description: |
+        An enrollment, the joining node polling it to wait for its join.
+        A user who sees the cluster, or a node of it.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+        - $ref: '#/components/parameters/inPathEnrollmentId'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterEnrollment'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /clusters/{cluster_id}/enrollments/{enrollment_id}/result:
+    post:
+      operationId: PostClusterEnrollmentResult
+      description: |
+        The member that claimed an enrollment reports how it ended: done when
+        the joining node accepted the join order (om3 POST /api/cluster/enroll),
+        which it then carries out; failed with the error otherwise. The join is
+        complete when the node reports the cluster as its own.
+      parameters:
+        - $ref: '#/components/parameters/inPathClusterId'
+        - $ref: '#/components/parameters/inPathEnrollmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterEnrollmentResult'
+      tags:
+        - provisioning
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterEnrollment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
 
   /resources:
     get:
@@ -12253,6 +12681,46 @@ paths:
                 $ref: '#/components/schemas/ListResponse'
         404:
           $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
+
+  /nodes/{node_id}/bootstrap_token:
+    post:
+      operationId: PostNodeBootstrapToken
+      description: |
+        Issue the bootstrap token of a declared node: the node must name a
+        cluster with a declaration. The token is shown once, kept hashed; it
+        revokes the unused token issued before. Manager or NodeManager.
+      parameters:
+        - $ref: '#/components/parameters/inPathNodeId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NodeBootstrapTokenRequest'
+      tags:
+        - provisioning
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeBootstrapToken'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
         500:
           $ref: '#/components/responses/500'
       security:
@@ -33401,6 +33869,312 @@ components:
         meta:
           $ref: '#/components/schemas/ListMeta'
 
+    ClusterHeartbeat:
+      description: |
+        A hb#<n> section of the om3 cluster configuration, n its rank from 1:
+        its keywords and their values. type is required.
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+      additionalProperties:
+        type: string
+    ClusterDeclarationInput:
+      type: object
+      required:
+        - cluster_name
+      properties:
+        cluster_name:
+          type: string
+        cluster_id:
+          type: string
+          description: The id of a cluster reporting already. Omitted, a new id.
+        app:
+          type: string
+          description: The app of the nodes of the cluster.
+        heartbeats:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterHeartbeat'
+    ClusterDeclarationUpdate:
+      type: object
+      properties:
+        app:
+          type: string
+        heartbeats:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterHeartbeat'
+    ClusterDeclaration:
+      type: object
+      required:
+        - cluster_id
+        - cluster_name
+        - app
+        - heartbeats
+        - created_by
+        - created
+        - updated
+      properties:
+        cluster_id:
+          type: string
+        cluster_name:
+          type: string
+        app:
+          type: string
+        heartbeats:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterHeartbeat'
+        seed_node_id:
+          type: string
+          nullable: true
+        seed_nodename:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+    ClusterDeclarationSummary:
+      allOf:
+        - $ref: '#/components/schemas/ClusterDeclaration'
+        - type: object
+          required:
+            - node_count
+            - reporting_count
+            - pending_enrollments
+          properties:
+            node_count:
+              type: integer
+              description: The nodes the collector has with the cluster_id.
+            reporting_count:
+              type: integer
+              description: Those that reported to the collector.
+            pending_enrollments:
+              type: integer
+    ClusterDeclarationList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterDeclarationSummary'
+    ClusterDeclarationNode:
+      type: object
+      required:
+        - node_id
+        - nodename
+        - app
+        - cluster_id
+        - seed
+      properties:
+        node_id:
+          type: string
+        nodename:
+          type: string
+        app:
+          type: string
+        cluster_id:
+          type: string
+          description: The cluster the node row names now.
+        seed:
+          type: boolean
+        last_comm:
+          type: string
+          format: date-time
+          nullable: true
+          description: The last report of the node, null when it never reported.
+        token_created:
+          type: string
+          format: date-time
+          nullable: true
+        token_expires:
+          type: string
+          format: date-time
+          nullable: true
+        token_used:
+          type: string
+          format: date-time
+          nullable: true
+    ClusterDeclarationNodeInput:
+      type: object
+      required:
+        - nodename
+      properties:
+        nodename:
+          type: string
+        app:
+          type: string
+    ClusterDeclarationNodeList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterDeclarationNode'
+    NodeBootstrapTokenRequest:
+      type: object
+      properties:
+        ttl_minutes:
+          type: integer
+          description: The lifetime of the token, 60 by default, 1440 at most.
+    NodeBootstrapToken:
+      type: object
+      required:
+        - token
+        - expires
+      properties:
+        token:
+          type: string
+        expires:
+          type: string
+          format: date-time
+    NodeBootstrapRequest:
+      type: object
+      required:
+        - nodename
+        - token
+      properties:
+        nodename:
+          type: string
+        token:
+          type: string
+    NodeBootstrapCluster:
+      type: object
+      required:
+        - id
+        - name
+        - role
+        - heartbeats
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [seed, join]
+        seed_nodename:
+          type: string
+          description: The node that created the cluster, when role is join.
+        heartbeats:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterHeartbeat'
+    NodeBootstrap:
+      type: object
+      required:
+        - node_id
+        - nodename
+        - uuid
+        - app
+        - cluster
+      properties:
+        node_id:
+          type: string
+        nodename:
+          type: string
+        uuid:
+          type: string
+          description: The credential of the node on the collector (node.uuid).
+        app:
+          type: string
+        cluster:
+          $ref: '#/components/schemas/NodeBootstrapCluster'
+    ClusterEnrollmentRequest:
+      type: object
+      required:
+        - join_token
+      properties:
+        join_token:
+          type: string
+        node_addr:
+          type: string
+          description: Where the members reach the api of the node. Its nodename by default.
+    ClusterEnrollmentState:
+      type: string
+      enum: [pending, claimed, done, failed, expired]
+    ClusterEnrollment:
+      type: object
+      required:
+        - id
+        - cluster_id
+        - node_id
+        - nodename
+        - node_addr
+        - state
+        - message
+        - created
+        - updated
+        - expires
+      properties:
+        id:
+          type: integer
+          format: int64
+        cluster_id:
+          type: string
+        node_id:
+          type: string
+        nodename:
+          type: string
+        node_addr:
+          type: string
+        state:
+          $ref: '#/components/schemas/ClusterEnrollmentState'
+        claimed_by:
+          type: string
+          nullable: true
+        message:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        expires:
+          type: string
+          format: date-time
+    ClusterEnrollmentList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterEnrollment'
+    ClusterEnrollmentClaim:
+      type: object
+      required:
+        - enrollment
+        - join_token
+      properties:
+        enrollment:
+          $ref: '#/components/schemas/ClusterEnrollment'
+        join_token:
+          type: string
+    ClusterEnrollmentResult:
+      type: object
+      required:
+        - state
+      properties:
+        state:
+          type: string
+          enum: [done, failed]
+        message:
+          type: string
     Problem:
       type: object
       properties:
@@ -33985,6 +34759,20 @@ components:
       schema:
         type: string
 
+    inPathClusterId:
+      in: path
+      name: cluster_id
+      required: true
+      description: Cluster identifier (clusters.cluster_id, a uuid)
+      schema:
+        type: string
+    inPathEnrollmentId:
+      in: path
+      name: enrollment_id
+      required: true
+      schema:
+        type: integer
+        format: int64
     inPathNodeId:
       in: path
       name: node_id

@@ -245,6 +245,51 @@ func (e ChecksBatchInputAction) Valid() bool {
 	}
 }
 
+// Defines values for ClusterEnrollmentResultState.
+const (
+	ClusterEnrollmentResultStateDone   ClusterEnrollmentResultState = "done"
+	ClusterEnrollmentResultStateFailed ClusterEnrollmentResultState = "failed"
+)
+
+// Valid indicates whether the value is a known member of the ClusterEnrollmentResultState enum.
+func (e ClusterEnrollmentResultState) Valid() bool {
+	switch e {
+	case ClusterEnrollmentResultStateDone:
+		return true
+	case ClusterEnrollmentResultStateFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClusterEnrollmentState.
+const (
+	ClusterEnrollmentStateClaimed ClusterEnrollmentState = "claimed"
+	ClusterEnrollmentStateDone    ClusterEnrollmentState = "done"
+	ClusterEnrollmentStateExpired ClusterEnrollmentState = "expired"
+	ClusterEnrollmentStateFailed  ClusterEnrollmentState = "failed"
+	ClusterEnrollmentStatePending ClusterEnrollmentState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ClusterEnrollmentState enum.
+func (e ClusterEnrollmentState) Valid() bool {
+	switch e {
+	case ClusterEnrollmentStateClaimed:
+		return true
+	case ClusterEnrollmentStateDone:
+		return true
+	case ClusterEnrollmentStateExpired:
+		return true
+	case ClusterEnrollmentStateFailed:
+		return true
+	case ClusterEnrollmentStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComplianceAttachmentOutcomeObject.
 const (
 	ComplianceAttachmentOutcomeObjectModuleset ComplianceAttachmentOutcomeObject = "moduleset"
@@ -782,6 +827,24 @@ func (e NetworkSegmentRowSegType) Valid() bool {
 	case NetworkSegmentRowSegTypeDynamic:
 		return true
 	case NetworkSegmentRowSegTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NodeBootstrapClusterRole.
+const (
+	Join NodeBootstrapClusterRole = "join"
+	Seed NodeBootstrapClusterRole = "seed"
+)
+
+// Valid indicates whether the value is a known member of the NodeBootstrapClusterRole enum.
+func (e NodeBootstrapClusterRole) Valid() bool {
+	switch e {
+	case Join:
+		return true
+	case Seed:
 		return true
 	default:
 		return false
@@ -2906,6 +2969,142 @@ type ChecksBatchInput struct {
 
 // ChecksBatchInputAction defines model for ChecksBatchInput.Action.
 type ChecksBatchInputAction string
+
+// ClusterDeclaration defines model for ClusterDeclaration.
+type ClusterDeclaration struct {
+	App          string             `json:"app"`
+	ClusterId    string             `json:"cluster_id"`
+	ClusterName  string             `json:"cluster_name"`
+	Created      time.Time          `json:"created"`
+	CreatedBy    string             `json:"created_by"`
+	Heartbeats   []ClusterHeartbeat `json:"heartbeats"`
+	SeedNodeId   *string            `json:"seed_node_id,omitempty"`
+	SeedNodename *string            `json:"seed_nodename,omitempty"`
+	Updated      time.Time          `json:"updated"`
+}
+
+// ClusterDeclarationInput defines model for ClusterDeclarationInput.
+type ClusterDeclarationInput struct {
+	// App The app of the nodes of the cluster.
+	App *string `json:"app,omitempty"`
+
+	// ClusterId The id of a cluster reporting already. Omitted, a new id.
+	ClusterId   *string             `json:"cluster_id,omitempty"`
+	ClusterName string              `json:"cluster_name"`
+	Heartbeats  *[]ClusterHeartbeat `json:"heartbeats,omitempty"`
+}
+
+// ClusterDeclarationList defines model for ClusterDeclarationList.
+type ClusterDeclarationList struct {
+	Data []ClusterDeclarationSummary `json:"data"`
+}
+
+// ClusterDeclarationNode defines model for ClusterDeclarationNode.
+type ClusterDeclarationNode struct {
+	App string `json:"app"`
+
+	// ClusterId The cluster the node row names now.
+	ClusterId string `json:"cluster_id"`
+
+	// LastComm The last report of the node, null when it never reported.
+	LastComm     *time.Time `json:"last_comm,omitempty"`
+	NodeId       string     `json:"node_id"`
+	Nodename     string     `json:"nodename"`
+	Seed         bool       `json:"seed"`
+	TokenCreated *time.Time `json:"token_created,omitempty"`
+	TokenExpires *time.Time `json:"token_expires,omitempty"`
+	TokenUsed    *time.Time `json:"token_used,omitempty"`
+}
+
+// ClusterDeclarationNodeInput defines model for ClusterDeclarationNodeInput.
+type ClusterDeclarationNodeInput struct {
+	App      *string `json:"app,omitempty"`
+	Nodename string  `json:"nodename"`
+}
+
+// ClusterDeclarationNodeList defines model for ClusterDeclarationNodeList.
+type ClusterDeclarationNodeList struct {
+	Data []ClusterDeclarationNode `json:"data"`
+}
+
+// ClusterDeclarationSummary defines model for ClusterDeclarationSummary.
+type ClusterDeclarationSummary struct {
+	App         string             `json:"app"`
+	ClusterId   string             `json:"cluster_id"`
+	ClusterName string             `json:"cluster_name"`
+	Created     time.Time          `json:"created"`
+	CreatedBy   string             `json:"created_by"`
+	Heartbeats  []ClusterHeartbeat `json:"heartbeats"`
+
+	// NodeCount The nodes the collector has with the cluster_id.
+	NodeCount          int `json:"node_count"`
+	PendingEnrollments int `json:"pending_enrollments"`
+
+	// ReportingCount Those that reported to the collector.
+	ReportingCount int       `json:"reporting_count"`
+	SeedNodeId     *string   `json:"seed_node_id,omitempty"`
+	SeedNodename   *string   `json:"seed_nodename,omitempty"`
+	Updated        time.Time `json:"updated"`
+}
+
+// ClusterDeclarationUpdate defines model for ClusterDeclarationUpdate.
+type ClusterDeclarationUpdate struct {
+	App        *string             `json:"app,omitempty"`
+	Heartbeats *[]ClusterHeartbeat `json:"heartbeats,omitempty"`
+}
+
+// ClusterEnrollment defines model for ClusterEnrollment.
+type ClusterEnrollment struct {
+	ClaimedBy *string                `json:"claimed_by,omitempty"`
+	ClusterId string                 `json:"cluster_id"`
+	Created   time.Time              `json:"created"`
+	Expires   time.Time              `json:"expires"`
+	Id        int64                  `json:"id"`
+	Message   string                 `json:"message"`
+	NodeAddr  string                 `json:"node_addr"`
+	NodeId    string                 `json:"node_id"`
+	Nodename  string                 `json:"nodename"`
+	State     ClusterEnrollmentState `json:"state"`
+	Updated   time.Time              `json:"updated"`
+}
+
+// ClusterEnrollmentClaim defines model for ClusterEnrollmentClaim.
+type ClusterEnrollmentClaim struct {
+	Enrollment ClusterEnrollment `json:"enrollment"`
+	JoinToken  string            `json:"join_token"`
+}
+
+// ClusterEnrollmentList defines model for ClusterEnrollmentList.
+type ClusterEnrollmentList struct {
+	Data []ClusterEnrollment `json:"data"`
+}
+
+// ClusterEnrollmentRequest defines model for ClusterEnrollmentRequest.
+type ClusterEnrollmentRequest struct {
+	JoinToken string `json:"join_token"`
+
+	// NodeAddr Where the members reach the api of the node. Its nodename by default.
+	NodeAddr *string `json:"node_addr,omitempty"`
+}
+
+// ClusterEnrollmentResult defines model for ClusterEnrollmentResult.
+type ClusterEnrollmentResult struct {
+	Message *string                      `json:"message,omitempty"`
+	State   ClusterEnrollmentResultState `json:"state"`
+}
+
+// ClusterEnrollmentResultState defines model for ClusterEnrollmentResult.State.
+type ClusterEnrollmentResultState string
+
+// ClusterEnrollmentState defines model for ClusterEnrollmentState.
+type ClusterEnrollmentState string
+
+// ClusterHeartbeat A hb#<n> section of the om3 cluster configuration, n its rank from 1:
+// its keywords and their values. type is required.
+type ClusterHeartbeat struct {
+	Type                 string            `json:"type"`
+	AdditionalProperties map[string]string `json:"-"`
+}
 
 // ClusterListResponse defines model for ClusterListResponse.
 type ClusterListResponse struct {
@@ -5181,6 +5380,49 @@ type NetworkSegmentRow struct {
 
 // NetworkSegmentRowSegType defines model for NetworkSegmentRow.SegType.
 type NetworkSegmentRowSegType string
+
+// NodeBootstrap defines model for NodeBootstrap.
+type NodeBootstrap struct {
+	App      string               `json:"app"`
+	Cluster  NodeBootstrapCluster `json:"cluster"`
+	NodeId   string               `json:"node_id"`
+	Nodename string               `json:"nodename"`
+
+	// Uuid The credential of the node on the collector (node.uuid).
+	Uuid string `json:"uuid"`
+}
+
+// NodeBootstrapCluster defines model for NodeBootstrapCluster.
+type NodeBootstrapCluster struct {
+	Heartbeats []ClusterHeartbeat       `json:"heartbeats"`
+	Id         string                   `json:"id"`
+	Name       string                   `json:"name"`
+	Role       NodeBootstrapClusterRole `json:"role"`
+
+	// SeedNodename The node that created the cluster, when role is join.
+	SeedNodename *string `json:"seed_nodename,omitempty"`
+}
+
+// NodeBootstrapClusterRole defines model for NodeBootstrapCluster.Role.
+type NodeBootstrapClusterRole string
+
+// NodeBootstrapRequest defines model for NodeBootstrapRequest.
+type NodeBootstrapRequest struct {
+	Nodename string `json:"nodename"`
+	Token    string `json:"token"`
+}
+
+// NodeBootstrapToken defines model for NodeBootstrapToken.
+type NodeBootstrapToken struct {
+	Expires time.Time `json:"expires"`
+	Token   string    `json:"token"`
+}
+
+// NodeBootstrapTokenRequest defines model for NodeBootstrapTokenRequest.
+type NodeBootstrapTokenRequest struct {
+	// TtlMinutes The lifetime of the token, 60 by default, 1440 at most.
+	TtlMinutes *int `json:"ttl_minutes,omitempty"`
+}
 
 // NodeHardwareListResponse defines model for NodeHardwareListResponse.
 type NodeHardwareListResponse struct {
@@ -7693,8 +7935,14 @@ type Version struct {
 // InPathAIName defines model for inPathAIName.
 type InPathAIName = string
 
+// InPathClusterId defines model for inPathClusterId.
+type InPathClusterId = string
+
 // InPathComplianceAgentName defines model for inPathComplianceAgentName.
 type InPathComplianceAgentName = string
+
+// InPathEnrollmentId defines model for inPathEnrollmentId.
+type InPathEnrollmentId = int64
 
 // InPathMsetId defines model for inPathMsetId.
 type InPathMsetId = string
@@ -18488,6 +18736,9 @@ type PostAuthBackchannelLogoutFormdataRequestBody PostAuthBackchannelLogoutFormd
 // PostAuthNodeJSONRequestBody defines body for PostAuthNode for application/json ContentType.
 type PostAuthNodeJSONRequestBody PostAuthNodeJSONBody
 
+// PostAuthNodeBootstrapJSONRequestBody defines body for PostAuthNodeBootstrap for application/json ContentType.
+type PostAuthNodeBootstrapJSONRequestBody = NodeBootstrapRequest
+
 // DeleteChartsJSONRequestBody defines body for DeleteCharts for application/json ContentType.
 type DeleteChartsJSONRequestBody DeleteChartsJSONBody
 
@@ -18529,6 +18780,21 @@ type DeleteChecksSettingsJSONRequestBody = CheckKey
 
 // PostChecksSettingsJSONRequestBody defines body for PostChecksSettings for application/json ContentType.
 type PostChecksSettingsJSONRequestBody = CheckSettingsRequest
+
+// PostClustersJSONRequestBody defines body for PostClusters for application/json ContentType.
+type PostClustersJSONRequestBody = ClusterDeclarationInput
+
+// PutClusterDeclarationJSONRequestBody defines body for PutClusterDeclaration for application/json ContentType.
+type PutClusterDeclarationJSONRequestBody = ClusterDeclarationUpdate
+
+// PostClusterDeclarationNodeJSONRequestBody defines body for PostClusterDeclarationNode for application/json ContentType.
+type PostClusterDeclarationNodeJSONRequestBody = ClusterDeclarationNodeInput
+
+// PostClusterEnrollmentJSONRequestBody defines body for PostClusterEnrollment for application/json ContentType.
+type PostClusterEnrollmentJSONRequestBody = ClusterEnrollmentRequest
+
+// PostClusterEnrollmentResultJSONRequestBody defines body for PostClusterEnrollmentResult for application/json ContentType.
+type PostClusterEnrollmentResultJSONRequestBody = ClusterEnrollmentResult
 
 // PostComplianceAttachmentsJSONRequestBody defines body for PostComplianceAttachments for application/json ContentType.
 type PostComplianceAttachmentsJSONRequestBody = ComplianceAttachmentsInput
@@ -18805,6 +19071,9 @@ type PostNodesDeleteJSONRequestBody = IdsInput
 
 // PostNodeJSONRequestBody defines body for PostNode for application/json ContentType.
 type PostNodeJSONRequestBody PostNodeJSONBody
+
+// PostNodeBootstrapTokenJSONRequestBody defines body for PostNodeBootstrapToken for application/json ContentType.
+type PostNodeBootstrapTokenJSONRequestBody = NodeBootstrapTokenRequest
 
 // PostNodeSnoozeJSONRequestBody defines body for PostNodeSnooze for application/json ContentType.
 type PostNodeSnoozeJSONRequestBody PostNodeSnoozeJSONBody
@@ -19215,6 +19484,72 @@ func (a AssistantRunInput) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'tools': %w", err)
 		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for ClusterHeartbeat. Returns the specified
+// element and whether it was found
+func (a ClusterHeartbeat) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ClusterHeartbeat
+func (a *ClusterHeartbeat) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ClusterHeartbeat to handle AdditionalProperties
+func (a *ClusterHeartbeat) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ClusterHeartbeat to handle AdditionalProperties
+func (a ClusterHeartbeat) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["type"], err = json.Marshal(a.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'type': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
