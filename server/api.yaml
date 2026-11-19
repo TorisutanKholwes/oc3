@@ -8058,7 +8058,10 @@ paths:
         - bearerAuth: [ ]
     get:
       operationId: GetLogs
-      description: List events in the collector log
+      description: |
+        List events in the collector log. A Manager reads them all; another user
+        reads their own events and those of the nodes and services of an app
+        their groups are responsible for. Users only.
       parameters:
         - in: query
           name: fset_id
@@ -8092,7 +8095,9 @@ paths:
   /logs/{log_id}:
     get:
       operationId: GetLog
-      description: Display a collector log event properties
+      description: |
+        Display a collector log event properties, if the user may read it, see
+        GET /logs. Users only.
       parameters:
         - in: path
           name: log_id
@@ -12402,7 +12407,9 @@ paths:
         swap, process count and paging. The resolution is the
         finest the files keep for the period: a minute over half an hour, ten minutes
         over three days, an hour over ninety days, a day beyond. A node without
-        statistics returns an empty list.
+        statistics returns an empty list. A user reads the statistics of the nodes
+        of an app their groups are responsible for, a Manager of every node, a node
+        its own; another node answers 404.
       parameters:
         - in: path
           name: node_id
