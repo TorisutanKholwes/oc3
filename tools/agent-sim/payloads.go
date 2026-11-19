@@ -448,7 +448,12 @@ func nodeChecksBody(spec fleetSpec, n *node, now time.Time) map[string]any {
 	for _, eth := range []string{"eth0", "eth1"} {
 		data = append(data, map[string]any{"driver": "ethtool", "instance": eth + ".link", "path": "", "type": "eth", "unit": "", "value": 1})
 	}
-	data = append(data, map[string]any{"driver": "lvm", "instance": "rootvg", "path": "", "type": "vg_u", "unit": "%", "value": r.IntN(100)})
+	vgUsed := r.IntN(100)
+	if n.profile != nil {
+		// A system volume group of a managed server: neither empty nor full.
+		vgUsed = 35 + r.IntN(40)
+	}
+	data = append(data, map[string]any{"driver": "lvm", "instance": "rootvg", "path": "", "type": "vg_u", "unit": "%", "value": vgUsed})
 	return map[string]any{"data": data}
 }
 
