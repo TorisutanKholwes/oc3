@@ -2,6 +2,7 @@ package serverhandlers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -61,6 +62,9 @@ func (a *Api) PostNodes(c echo.Context) error {
 	}
 	if body.Nodename == nil || *body.Nodename == "" {
 		return JSONProblemf(c, http.StatusBadRequest, "nodename is required to create a node")
+	}
+	if msg := checkNodeConnectTo(nodeBodyFieldsFromPostNodes(body).toFields()); msg != "" {
+		return JSONProblem(c, http.StatusBadRequest, msg)
 	}
 
 	if msg, err := checkNodeConstraints(c, ctx, odb, "", nodeBodyFieldsFromPostNodes(body).toFields()); err != nil {
@@ -135,6 +139,16 @@ func (a *Api) PostNodes(c echo.Context) error {
 	return fetchAndReturnNode(c, odb, ctx, nodeID, "cannot fetch created node")
 }
 
+// checkNodeConnectTo returns why the connect_to of fields is refused, or "": a
+// host the collector connects to over ssh, see validSSHHost. Empty unsets it.
+func checkNodeConnectTo(fields map[string]any) string {
+	v, ok := fields["connect_to"].(string)
+	if !ok || v == "" || validSSHHost(v) {
+		return ""
+	}
+	return fmt.Sprintf("invalid connect_to %q: a host name or an ip address", v)
+}
+
 func postNodeUpdate(c echo.Context, log interface{ Error(string, ...any) }, odb *cdb.DB, ctx context.Context, nodeID string, fields map[string]any) error {
 	if IsAuthByNode(c) {
 		// A node can only update itself
@@ -158,6 +172,9 @@ func postNodeUpdate(c echo.Context, log interface{ Error(string, ...any) }, odb 
 		if !responsible {
 			return JSONProblemf(c, http.StatusForbidden, "user is not responsible for node %s", nodeID)
 		}
+	}
+	if msg := checkNodeConnectTo(fields); msg != "" {
+		return JSONProblem(c, http.StatusBadRequest, msg)
 	}
 	if msg, err := checkNodeConstraints(c, ctx, odb, nodeID, fields); err != nil {
 		log.Error("cannot check the field constraints", logkey.Error, err)
