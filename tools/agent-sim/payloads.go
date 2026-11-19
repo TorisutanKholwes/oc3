@@ -385,9 +385,20 @@ func nodePackagesBody(spec fleetSpec, n *node) map[string]any {
 		case n.profile.hw.osVendor == "SUSE":
 			dist = ".150600"
 		}
+		// The nodes of a cluster run the same versions, but for a package
+		// one of them was not updated with the others, now and then.
+		cr := spec.newRand("packages", n.cluster.name)
+		lagging := -1
+		if r.IntN(6) == 0 {
+			lagging = r.IntN(len(realisticPackages(n)))
+		}
 		for i, name := range realisticPackages(n) {
+			major, minor, patch := 1+i%5, cr.IntN(20), cr.IntN(12)
+			if i == lagging && patch > 0 {
+				patch--
+			}
 			pkgs = append(pkgs, map[string]any{
-				"name": name, "version": fmt.Sprintf("%d.%d.%d%s", 1+i%5, r.IntN(20), r.IntN(12), dist),
+				"name": name, "version": fmt.Sprintf("%d.%d.%d%s", major, minor, patch, dist),
 				"arch": arch, "type": typ, "installed_at": installed.Add(time.Duration(i) * 7 * time.Hour).Format(time.RFC3339), "sig": "",
 			})
 		}

@@ -96,7 +96,7 @@ var realisticCatalog = []catalogCluster{
 		{name: "billing-api", ns: "prd", topology: "flex", kinds: kindsApp, image: "registry.example.com/billing/api:4.12.1"},
 		{name: "billing-portal", ns: "prd", topology: "flex", kinds: kindsWeb, image: "registry.example.com/billing/portal:2.8.0"},
 	}},
-	{name: "billing-uat", host: "billing-uat", app: "BILLING", team: "WebOps", env: "UAT", site: siteLY2, hw: hwVM, role: "app", nodes: 2, services: []catalogService{
+	{name: "billing-uat", host: "billing-uat", app: "BILLING", team: "WebOps", env: "TST", site: siteLY2, hw: hwVM, role: "app", nodes: 2, services: []catalogService{
 		{name: "billing-pgsql", ns: "uat", topology: "failover", kinds: kindsDB, image: "postgres:16.4"},
 		{name: "billing-api", ns: "uat", topology: "flex", kinds: kindsApp, image: "registry.example.com/billing/api:4.13.0-rc2"},
 	}},
