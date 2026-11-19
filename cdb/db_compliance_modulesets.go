@@ -153,10 +153,13 @@ func (oDb *DB) CloneCompModuleset(ctx context.Context, id int64, author string, 
 	return newID, cloneName, nil
 }
 
-// CompModulesetUsage lists the modulesets holding a moduleset as a child.
-func (oDb *DB) CompModulesetUsage(ctx context.Context, id int64) (map[string][]map[string]any, error) {
-	parents, err := oDb.namedPairs(ctx, "SELECT m.id, m.modset_name FROM comp_moduleset_moduleset mm"+
-		" JOIN comp_moduleset m ON m.id = mm.parent_modset_id WHERE mm.child_modset_id = ? ORDER BY m.modset_name", id, "id", "modset_name")
+// CompModulesetUsage lists the modulesets holding a moduleset as a child, those
+// published to the caller's groups; all of them for a manager.
+func (oDb *DB) CompModulesetUsage(ctx context.Context, id int64, groups []string, isManager bool) (map[string][]map[string]any, error) {
+	scope, args := compObjectVisibleCond(CompModulesetKind, groups, isManager)
+	parents, err := oDb.namedPairs(ctx, "SELECT comp_moduleset.id, comp_moduleset.modset_name FROM comp_moduleset_moduleset mm"+
+		" JOIN comp_moduleset ON comp_moduleset.id = mm.parent_modset_id WHERE mm.child_modset_id = ? AND "+scope+
+		" ORDER BY comp_moduleset.modset_name", append([]any{id}, args...), "id", "modset_name")
 	if err != nil {
 		return nil, fmt.Errorf("compModulesetUsage: %w", err)
 	}

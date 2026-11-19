@@ -354,16 +354,32 @@ func (oDb *DB) CompRulesetsChains(ctx context.Context) error {
 }
 
 // CompRulesetUsage lists what uses a ruleset: the modulesets and the parent
-// rulesets holding it, the nodes and the services it is attached to.
-func (oDb *DB) CompRulesetUsage(ctx context.Context, id int64) (map[string][]map[string]any, error) {
+// rulesets holding it, the nodes and the services it is attached to, those the
+// caller may see: the modulesets and rulesets published to their groups, the
+// nodes and services of an app their groups are responsible for; all of them
+// for a manager.
+func (oDb *DB) CompRulesetUsage(ctx context.Context, id int64, groups []string, isManager bool) (map[string][]map[string]any, error) {
+	modsetScope, modsetArgs := compObjectVisibleCond(CompModulesetKind, groups, isManager)
+	rsetScope, rsetArgs := compRulesetVisibleCond(groups, isManager)
+	nodeScope, nodeArgs := appScope("nodes.app", groups, isManager)
+	svcScope, svcArgs := appScope("services.svc_app", groups, isManager)
 	out := map[string][]map[string]any{}
-	for _, q := range []struct{ key, idKey, nameKey, query string }{
-		{"modulesets", "id", "modset_name", "SELECT m.id, m.modset_name FROM comp_moduleset_ruleset mr JOIN comp_moduleset m ON m.id = mr.modset_id WHERE mr.ruleset_id = ? ORDER BY m.modset_name"},
-		{"rulesets", "id", "ruleset_name", "SELECT r.id, COALESCE(r.ruleset_name, '') FROM comp_rulesets_rulesets rr JOIN comp_rulesets r ON r.id = rr.parent_rset_id WHERE rr.child_rset_id = ? ORDER BY r.ruleset_name"},
-		{"nodes", "node_id", "nodename", "SELECT rn.node_id, COALESCE(n.nodename, '') FROM comp_rulesets_nodes rn JOIN nodes n ON n.node_id = rn.node_id WHERE rn.ruleset_id = ? ORDER BY n.nodename"},
-		{"services", "svc_id", "svcname", "SELECT rs.svc_id, COALESCE(s.svcname, '') FROM comp_rulesets_services rs JOIN services s ON s.svc_id = rs.svc_id WHERE rs.ruleset_id = ? ORDER BY s.svcname"},
+	for _, q := range []struct {
+		key, idKey, nameKey, query string
+		args                       []any
+	}{
+		{"modulesets", "id", "modset_name", "SELECT comp_moduleset.id, comp_moduleset.modset_name FROM comp_moduleset_ruleset mr" +
+			" JOIN comp_moduleset ON comp_moduleset.id = mr.modset_id WHERE mr.ruleset_id = ? AND " + modsetScope +
+			" ORDER BY comp_moduleset.modset_name", modsetArgs},
+		{"rulesets", "id", "ruleset_name", "SELECT comp_rulesets.id, COALESCE(comp_rulesets.ruleset_name, '') FROM comp_rulesets_rulesets rr" +
+			" JOIN comp_rulesets ON comp_rulesets.id = rr.parent_rset_id WHERE rr.child_rset_id = ? AND " + rsetScope +
+			" ORDER BY comp_rulesets.ruleset_name", rsetArgs},
+		{"nodes", "node_id", "nodename", "SELECT rn.node_id, COALESCE(nodes.nodename, '') FROM comp_rulesets_nodes rn" +
+			" JOIN nodes ON nodes.node_id = rn.node_id WHERE rn.ruleset_id = ? AND " + nodeScope + " ORDER BY nodes.nodename", nodeArgs},
+		{"services", "svc_id", "svcname", "SELECT rs.svc_id, COALESCE(services.svcname, '') FROM comp_rulesets_services rs" +
+			" JOIN services ON services.svc_id = rs.svc_id WHERE rs.ruleset_id = ? AND " + svcScope + " ORDER BY services.svcname", svcArgs},
 	} {
-		entries, err := oDb.namedPairs(ctx, q.query, id, q.idKey, q.nameKey)
+		entries, err := oDb.namedPairs(ctx, q.query, append([]any{id}, q.args...), q.idKey, q.nameKey)
 		if err != nil {
 			return nil, fmt.Errorf("compRulesetUsage: %s: %w", q.key, err)
 		}
@@ -374,8 +390,8 @@ func (oDb *DB) CompRulesetUsage(ctx context.Context, id int64) (map[string][]map
 
 // namedPairs runs a query returning (id, name) rows, as a list of objects with
 // the given keys; an integer id stays a number.
-func (oDb *DB) namedPairs(ctx context.Context, query string, arg any, idKey, nameKey string) ([]map[string]any, error) {
-	rows, err := oDb.DB.QueryContext(ctx, query, arg)
+func (oDb *DB) namedPairs(ctx context.Context, query string, args []any, idKey, nameKey string) ([]map[string]any, error) {
+	rows, err := oDb.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
