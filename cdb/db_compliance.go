@@ -1185,20 +1185,11 @@ func buildCompStatusQuery(groups []string, isManager bool, selectExprs []string)
 	query := "SELECT " + strings.Join(selectExprs, ", ") + "\nFROM " + compStatusFrom
 	var args []any
 
-	if !isManager {
-		clean := cleanGroups(groups)
-		if len(clean) == 0 {
-			query += "\nWHERE 1=0"
-		} else {
-			// The runs of the nodes of an app the groups are responsible
-			// for, as the nodes list.
-			scope, scopeArgs := appScope("nodes.app", clean, false)
-			query += "\nWHERE " + scope
-			args = append(args, scopeArgs...)
-		}
-	} else {
-		query += "\nWHERE 1=1"
-	}
+	// The runs of a node of an app published to the caller, as GET
+	// /compliance/status.
+	cond, condArgs := compPublishedNodesCond("comp_status.node_id", groups, isManager)
+	query += "\nWHERE " + cond
+	args = append(args, condArgs...)
 	return query, args, nil
 }
 
@@ -1210,24 +1201,11 @@ func (oDb *DB) GetServiceComplianceStatus(ctx context.Context, svcID string, p L
 	query := "SELECT " + strings.Join(p.SelectExprs, ", ") + "\nFROM " + compStatusFrom + "\nWHERE comp_status.svc_id = ?"
 	args := []any{svcID}
 
-	if !p.IsManager {
-		clean := cleanGroups(p.Groups)
-		if len(clean) == 0 {
-			query += " AND 1=0"
-		} else {
-			placeholders := Placeholders(len(clean))
-			query += ` AND comp_status.svc_id IN (
-				SELECT s.svc_id FROM services s
-				JOIN apps a ON s.svc_app = a.app
-				JOIN apps_responsibles ar ON ar.app_id = a.id
-				JOIN auth_group ag ON ag.id = ar.group_id
-				WHERE ag.role IN (` + placeholders + `)
-			)`
-			for _, g := range clean {
-				args = append(args, g)
-			}
-		}
-	}
+	// The runs on a node of an app published to the caller, as GET
+	// /compliance/status.
+	cond, condArgs := compPublishedNodesCond("comp_status.node_id", p.Groups, p.IsManager)
+	query += " AND " + cond
+	args = append(args, condArgs...)
 
 	if gb := p.GroupByClause(""); gb != "" {
 		query += " " + gb
