@@ -870,6 +870,10 @@ func (oDb *DB) DashboardUpdateNodeMaintenanceExpired(ctx context.Context) error 
 	return nil
 }
 
+// DashboardUpdateNodeCloseToMaintenanceEnd raises an alert on the nodes whose
+// maintenance ends within 30 days, as update_dash_node_near_maintenance_end of
+// the historical collector; an ended maintenance is the "node maintenance
+// expired" alert.
 func (oDb *DB) DashboardUpdateNodeCloseToMaintenanceEnd(ctx context.Context) error {
 	// One instant for the alerts written and the purge of the others: an
 	// alert written in this run is not purged.
@@ -895,8 +899,8 @@ func (oDb *DB) DashboardUpdateNodeCloseToMaintenanceEnd(ctx context.Context) err
 		WHERE
 		  maintenance_end IS NOT NULL AND
 		  maintenance_end != "0000-00-00 00:00:00" AND
-		  maintenance_end > DATE_SUB(?, INTERVAL 30 DAY) AND
-		  maintenance_end > ?`,
+		  maintenance_end > ? AND
+		  maintenance_end < DATE_ADD(?, INTERVAL 30 DAY)`,
 		args:    []any{now, now, now, now},
 		columns: positionalAlertColumns,
 		update:  []string{"dash_updated = s.dash_updated"},
