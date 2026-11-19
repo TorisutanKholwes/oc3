@@ -565,6 +565,10 @@ func (d *jobFeedDaemonStatus) dbCreateServices(ctx context.Context) error {
 		slog.Debug(fmt.Sprintf("created service %s with app %s new id: %s", objectName, app, obj.SvcID))
 		d.byObjectName[objectName] = obj
 		d.byObjectName[obj.SvcID] = obj
+		// Known by its id too, as the services found: dbUpdateServices gives
+		// it the status of this daemon status, rather than leaving it undef
+		// until the next one, which comes only with a change.
+		d.byObjectID[obj.SvcID] = obj
 	}
 	return nil
 }
