@@ -219,6 +219,7 @@ var clusterCascadeTables = []string{
 	"cluster_declarations",
 	"node_bootstrap_tokens",
 	"cluster_enrollments",
+	"node_cluster_claims",
 	"oidc_provider_grants",
 	"clusters",
 }

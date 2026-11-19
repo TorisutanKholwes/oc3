@@ -54,7 +54,13 @@ func TestPostAuthNodeAnonymous(t *testing.T) {
 			" log_impersonator VARCHAR(100), log_origin VARCHAR(16), log_request_id VARCHAR(64), log_fmt VARCHAR(200), log_dict TEXT," +
 			" log_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, svc_id CHAR(36) DEFAULT '', log_level ENUM('debug','info','warning','error','critical') DEFAULT 'info'," +
 			" node_id CHAR(36) DEFAULT '')",
+		"CREATE TABLE cluster_declarations (cluster_id char(36) PRIMARY KEY)",
+		"CREATE TABLE services (svc_id char(36) PRIMARY KEY, cluster_id char(36))",
+		"CREATE TABLE clusters (cluster_id char(36) PRIMARY KEY)",
+		"CREATE TABLE node_cluster_claims (node_id char(36) PRIMARY KEY, cluster_id char(36) NOT NULL, created datetime NOT NULL, updated datetime NOT NULL)",
 		"INSERT INTO apps (app) VALUES ('app1')",
+		// c2 has a member: a node claiming it waits for the member to confirm.
+		"INSERT INTO nodes (nodename, team_responsible, app, node_id, cluster_id) VALUES ('m2', 'Everybody', 'app1', 'm2', 'c2')",
 		"INSERT INTO nodes (nodename, team_responsible, app, node_id, cluster_id) VALUES ('node1', 'Everybody', 'app1', 'n1', 'c1')",
 		"INSERT INTO auth_node (nodename, uuid, node_id) VALUES ('node1', 'secret-uuid', 'n1')",
 	} {
@@ -69,10 +75,14 @@ func TestPostAuthNodeAnonymous(t *testing.T) {
 	viper.Set("server.allow_anon_register", true)
 	t.Cleanup(func() { viper.Set("server.allow_anon_register", false) })
 
-	register := func(mode, nodename string) (int, map[string]any) {
+	register := func(mode, nodename string, clusterID ...string) (int, map[string]any) {
 		t.Helper()
+		cluster := "c2"
+		if len(clusterID) > 0 {
+			cluster = clusterID[0]
+		}
 		c, rec := aiContext(http.MethodPost, "/auth/node",
-			fmt.Sprintf(`{"nodename": %q, "app": "app1", "cluster_id": "c2"}`, nodename))
+			fmt.Sprintf(`{"nodename": %q, "app": "app1", "cluster_id": %q}`, nodename, cluster))
 		c.Set(XAuthMode, mode)
 		if mode == AuthModeNode {
 			c.Set(XNodeID, "n1")
@@ -96,5 +106,25 @@ func TestPostAuthNodeAnonymous(t *testing.T) {
 	}
 	if code, body := register(AuthModeAnonRegister, "node2"); code != http.StatusOK || body["uuid"] == nil || body["uuid"] == "" {
 		t.Errorf("anonymous, new node: %d %v", code, body)
+	}
+	cluster := func(nodename string) (clusterID, claimed string) {
+		t.Helper()
+		if err := pool.QueryRow("SELECT n.cluster_id, IFNULL(c.cluster_id, '') FROM nodes n LEFT JOIN node_cluster_claims c ON c.node_id = n.node_id"+
+			" WHERE n.nodename = ?", nodename).Scan(&clusterID, &claimed); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	if got, claim := cluster("node1"); got != "c1" || claim != "c2" {
+		t.Errorf("the node itself claiming a cluster with members: cluster %q claim %q, want c1 c2", got, claim)
+	}
+	if got, claim := cluster("node2"); got != "" || claim != "c2" {
+		t.Errorf("new node claiming a cluster with members: cluster %q claim %q, want '' c2", got, claim)
+	}
+	if code, _ := register(AuthModeNode, "node1", "c3"); code != http.StatusOK {
+		t.Errorf("the node itself, new cluster: %d", code)
+	}
+	if got, claim := cluster("node1"); got != "c3" || claim != "" {
+		t.Errorf("the node itself claiming a new cluster: cluster %q claim %q, want c3 ''", got, claim)
 	}
 }

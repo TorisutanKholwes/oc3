@@ -63,6 +63,9 @@ func (a *Api) PostNodes(c echo.Context) error {
 	if body.Nodename == nil || *body.Nodename == "" {
 		return JSONProblemf(c, http.StatusBadRequest, "nodename is required to create a node")
 	}
+	if err := checkNodeClusterIDChange(c, nodeBodyFieldsFromPostNodes(body).toFields()); err != nil {
+		return err
+	}
 	if msg := checkNodeConnectTo(nodeBodyFieldsFromPostNodes(body).toFields()); msg != "" {
 		return JSONProblem(c, http.StatusBadRequest, msg)
 	}
@@ -140,7 +143,19 @@ func (a *Api) PostNodes(c echo.Context) error {
 }
 
 // nodeSelfReadOnlyFields are the properties a node can not change on itself.
-var nodeSelfReadOnlyFields = []string{"app", "nodename", "action_type", "collector"}
+// Its cluster is the one its daemon status reports, a member of the cluster
+// confirming it (see cdb.ClaimClusterMembership).
+var nodeSelfReadOnlyFields = []string{"app", "nodename", "action_type", "collector", "cluster_id"}
+
+// checkNodeClusterIDChange refuses a user other than a Manager to set the
+// cluster of a node: the node would be taken for a member of the cluster,
+// reporting for its nodes, enrolling the nodes joining it.
+func checkNodeClusterIDChange(c echo.Context, fields map[string]any) error {
+	if _, ok := fields["cluster_id"]; ok && !IsManager(c) {
+		return denyRequest(c, http.StatusForbidden, "only a Manager can set the cluster of a node")
+	}
+	return nil
+}
 
 // checkNodeConnectTo returns why the connect_to of fields is refused, or "": a
 // host the collector connects to over ssh, see validSSHHost. Empty unsets it.
@@ -182,6 +197,9 @@ func postNodeUpdate(c echo.Context, log interface{ Error(string, ...any) }, odb 
 		}
 		if !responsible {
 			return JSONProblemf(c, http.StatusForbidden, "user is not responsible for node %s", nodeID)
+		}
+		if err := checkNodeClusterIDChange(c, fields); err != nil {
+			return err
 		}
 	}
 	if msg := checkNodeConnectTo(fields); msg != "" {

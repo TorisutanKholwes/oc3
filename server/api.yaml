@@ -2439,10 +2439,13 @@ paths:
                 cluster_id:
                   type: string
                   description: |
-                    The cluster id of the node, set on the node so it is
-                    known before its first daemon status. Absent or empty, the
-                    node cluster id is left untouched. Ignored for a joining
-                    node, which takes the cluster id of the enroller.
+                    The cluster id of the node, claimed for the node so it is
+                    known before its first daemon status: the node becomes a
+                    member of a cluster the collector does not know at once, of
+                    a cluster known already once a member lists it in its
+                    daemon status. Absent or empty, the node cluster id is left
+                    untouched. Ignored for a joining node, which takes the
+                    cluster id of the enroller.
       responses:
         200:
           description: Accepted
@@ -10631,6 +10634,10 @@ paths:
                   type: string
                 cluster_id:
                   type: string
+                  description: |
+                    Set by a Manager only, refused to a node: a node is a
+                    member of the cluster its daemon status reports, once a
+                    member confirms it.
                 warranty_end:
                   type: string
                 maintenance_end:
@@ -10986,6 +10993,10 @@ paths:
                   type: string
                 cluster_id:
                   type: string
+                  description: |
+                    Set by a Manager only, refused to a node: a node is a
+                    member of the cluster its daemon status reports, once a
+                    member confirms it.
                 warranty_end:
                   type: string
                 maintenance_end:
