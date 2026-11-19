@@ -417,7 +417,12 @@ func nodeChecksBody(spec fleetSpec, n *node, now time.Time) map[string]any {
 	r := spec.newRand("checks", n.name, now.Unix()/86400)
 	var data []any
 	for _, mnt := range []string{"/", "/var", "/srv", "/tmp", "/boot"} {
-		data = append(data, map[string]any{"driver": "df", "instance": mnt, "path": "", "type": "fs_u", "unit": "%", "value": r.IntN(100)})
+		used := r.IntN(100)
+		if n.profile != nil {
+			// The system file systems of a managed server are sized with room.
+			used = 15 + r.IntN(50)
+		}
+		data = append(data, map[string]any{"driver": "df", "instance": mnt, "path": "", "type": "fs_u", "unit": "%", "value": used})
 		data = append(data, map[string]any{"driver": "df", "instance": mnt, "path": "", "type": "fs_i", "unit": "%", "value": r.IntN(30)})
 	}
 	for _, s := range n.cluster.services {
