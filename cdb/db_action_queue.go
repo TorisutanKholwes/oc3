@@ -97,14 +97,16 @@ func buildActionsQuery(p ListParams, idCond string, idArgs []any) (string, []any
 		if len(cleanGroups) == 0 {
 			conds = append(conds, "1=0")
 		} else {
+			// The actions on a node of the caller's apps, or on a service of
+			// their apps, wherever it runs.
+			apps := "SELECT a.app FROM apps a" +
+				" JOIN apps_responsibles ar ON ar.app_id = a.id" +
+				" JOIN auth_group ag ON ag.id = ar.group_id" +
+				" WHERE ag.role IN (" + Placeholders(len(cleanGroups)) + ")"
 			conds = append(conds,
-				"action_queue.node_id IN ("+
-					"SELECT n.node_id FROM nodes n"+
-					" JOIN apps a ON n.app = a.app"+
-					" JOIN apps_responsibles ar ON ar.app_id = a.id"+
-					" JOIN auth_group ag ON ag.id = ar.group_id"+
-					" WHERE ag.role IN ("+Placeholders(len(cleanGroups))+")"+
-					")")
+				"(action_queue.node_id IN (SELECT n.node_id FROM nodes n WHERE n.app IN ("+apps+"))"+
+					" OR action_queue.svc_id IN (SELECT s.svc_id FROM services s WHERE s.svc_app IN ("+apps+")))")
+			args = append(args, stringsToAny(cleanGroups)...)
 			args = append(args, stringsToAny(cleanGroups)...)
 		}
 	}
