@@ -130,6 +130,21 @@ func (a *Api) PostAuthNode(c echo.Context) error {
 	if node != nil {
 		// Node already exists in node table
 		nodeID = node.NodeID
+		// Registered already, its password is never given to an anonymous
+		// caller, who would only have to know its name and its app, nor is
+		// its cluster changed: the node registers again with its own
+		// credentials, or a user responsible for its app registers it.
+		if IsAuthByAnonRegister(c) {
+			if registered, err := odb.AuthNodesByNodeID(ctx, nodeID); err != nil {
+				log.Error("failed to find auth_node", logkey.Error, err)
+				return JSONProblemf(c, http.StatusInternalServerError, "auth_node lookup failed")
+			} else if len(registered) > 0 {
+				a.nodeRegisterLog(c, ctx, log, "warning", "node %(node)s anonymous registration refused: already registered", nodeID,
+					map[string]any{"node": nodename})
+				return JSONProblemf(c, http.StatusForbidden,
+					"node %s is already registered: register it again with its node credentials, or with the credentials of a collector user", nodename)
+			}
+		}
 		if clusterID != "" && clusterID != node.ClusterID {
 			if err := odb.UpdateNodeFields(ctx, nodeID, map[string]any{"cluster_id": clusterID}); err != nil {
 				log.Error("failed to update node cluster id", logkey.Error, err)
