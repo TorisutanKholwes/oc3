@@ -8640,7 +8640,9 @@ paths:
       description: |
         The declaration of a cluster: what the collector provisions its nodes
         with (name, app, heartbeats) and the node elected to create it, the
-        seed. Manager or NodeManager.
+        seed.
+        Manager, or NodeManager responsible for the app of the declaration
+        and the nodes of the cluster: another declaration is not found.
       parameters:
         - $ref: '#/components/parameters/inPathClusterId'
       tags:
@@ -8731,7 +8733,9 @@ paths:
       operationId: GetClusterDeclarations
       description: |
         The declared clusters, by name, with their nodes declared and reporting
-        and their pending enrollments. Manager or NodeManager.
+        and their pending enrollments. Manager, or NodeManager: the
+        declarations listed are those whose app and cluster nodes the user is
+        responsible for.
       tags:
         - provisioning
       responses:
@@ -8757,7 +8761,9 @@ paths:
       description: |
         The nodes of a declared cluster, those the collector has with its
         cluster_id or bootstrapped into it, with their last bootstrap token and
-        whether they report. Manager or NodeManager.
+        whether they report.
+        Manager, or NodeManager responsible for the app of the declaration
+        and the nodes of the cluster: another declaration is not found.
       parameters:
         - $ref: '#/components/parameters/inPathClusterId'
       tags:

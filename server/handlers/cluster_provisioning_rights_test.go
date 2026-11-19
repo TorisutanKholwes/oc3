@@ -59,3 +59,31 @@ func TestRequireProvisioningApps(t *testing.T) {
 		}
 	}
 }
+
+// TestRequireProvisioningVisible checks the declaration of a cluster the user
+// may not provision is not found, as if it did not exist.
+func TestRequireProvisioningVisible(t *testing.T) {
+	store := fakeProvisioningRights{
+		userApps: map[string][]string{"TeamA": {"A"}, "TeamB": {"B"}},
+		nodeApps: map[string][]string{"ca": {"A"}},
+	}
+	for _, tc := range []struct {
+		groups []string
+		app    string
+		want   int
+	}{
+		{[]string{"NodeManager", "TeamA"}, "A", 0},
+		{[]string{"NodeManager", "TeamB"}, "A", http.StatusNotFound},
+		{[]string{"NodeManager", "TeamB"}, "B", http.StatusNotFound}, // nodes of A
+		{[]string{"Manager"}, "B", 0},
+	} {
+		c, rec := aiContext(http.MethodGet, "/clusters/ca/declaration", "", tc.groups...)
+		got := 0
+		if err := requireProvisioningVisible(c, context.Background(), slog.Default(), store, "ca", tc.app); err != nil {
+			got = rec.Code
+		}
+		if got != tc.want {
+			t.Errorf("%v app %s: got %d, want %d", tc.groups, tc.app, got, tc.want)
+		}
+	}
+}

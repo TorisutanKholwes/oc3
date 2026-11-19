@@ -263,6 +263,9 @@ func (a *Api) GetClusterDeclaration(c echo.Context, clusterId server.InPathClust
 	} else if d == nil {
 		return JSONProblemf(c, http.StatusNotFound, "the cluster %s is not declared", clusterId)
 	}
+	if err := requireProvisioningVisible(c, ctx, log, a.ODB, clusterId, d.App); err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, clusterDeclarationResponse(d))
 }
 
@@ -826,15 +829,27 @@ func (a *Api) GetClusterDeclarations(c echo.Context) error {
 		log.Error("cannot list the declarations", logkey.Error, err)
 		return JSONProblemf(c, http.StatusInternalServerError, "cannot list the declarations")
 	}
-	data := make([]server.ClusterDeclarationSummary, len(l))
-	for i, d := range l {
+	// The declarations of the clusters the user may provision only.
+	scope, err := newProvisioningScope(c, ctx, a.ODB)
+	if err != nil {
+		log.Error("cannot list the apps of the user", logkey.Error, err)
+		return JSONProblemf(c, http.StatusInternalServerError, "cannot check the responsibility")
+	}
+	data := make([]server.ClusterDeclarationSummary, 0, len(l))
+	for _, d := range l {
+		if why, err := scope.allows(ctx, d.ClusterID, d.App); err != nil {
+			log.Error("cannot list the apps of the cluster nodes", logkey.Error, err)
+			return JSONProblemf(c, http.StatusInternalServerError, "cannot check the responsibility")
+		} else if why != "" {
+			continue
+		}
 		r := clusterDeclarationResponse(&d.DBClusterDeclaration)
-		data[i] = server.ClusterDeclarationSummary{
+		data = append(data, server.ClusterDeclarationSummary{
 			ClusterId: r.ClusterId, ClusterName: r.ClusterName, App: r.App, Heartbeats: r.Heartbeats,
 			SeedNodeId: r.SeedNodeId, SeedNodename: r.SeedNodename,
 			CreatedBy: r.CreatedBy, Created: r.Created, Updated: r.Updated,
 			NodeCount: d.NodeCount, ReportingCount: d.ReportingCount, PendingEnrollments: d.PendingEnrollments,
-		}
+		})
 	}
 	return c.JSON(http.StatusOK, server.ClusterDeclarationList{Data: data})
 }
@@ -853,6 +868,9 @@ func (a *Api) GetClusterDeclarationNodes(c echo.Context, clusterId server.InPath
 		return JSONProblemf(c, http.StatusInternalServerError, "cannot read the declaration")
 	} else if d == nil {
 		return JSONProblemf(c, http.StatusNotFound, "the cluster %s is not declared", clusterId)
+	}
+	if err := requireProvisioningVisible(c, ctx, log, a.ODB, clusterId, d.App); err != nil {
+		return err
 	}
 	l, err := a.ODB.ClusterDeclarationNodes(ctx, clusterId)
 	if err != nil {
