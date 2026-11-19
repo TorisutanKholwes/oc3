@@ -2983,7 +2983,9 @@ paths:
   /disks:
     post:
       operationId: PostDisks
-      description: Create or update a disk in diskinfo
+      description: |
+        Create or update a disk in diskinfo. A Manager or a StorageManager, or a
+        node proxy of the array of the disk.
       requestBody:
         required: true
         content:
@@ -3110,7 +3112,9 @@ paths:
   /disks/{disk_id}:
     delete:
       operationId: DeleteDisk
-      description: Delete a disk from diskinfo
+      description: |
+        Delete a disk from diskinfo. A Manager or a StorageManager, or a node
+        proxy of the array of the disk.
       parameters:
         - in: path
           name: disk_id
@@ -10608,7 +10612,8 @@ paths:
       description: |
         Create or update a node (by nodename or node_id). The attributes a user
         sets are checked against the strict and regex constraints, as by
-        POST /nodes/{node_id}.
+        POST /nodes/{node_id}. Creating a node requires the NodeManager
+        privilege; updating one is POST /nodes/{node_id}.
       requestBody:
         required: true
         content:

@@ -56,8 +56,8 @@ func (a *Api) PostNodes(c echo.Context) error {
 		return postNodeUpdate(c, log, odb, ctx, existing.NodeID, nodeBodyFieldsFromPostNodes(body).toFields())
 	}
 
-	// Create path
-	if !IsManager(c) {
+	// Create path: NodeManager, as to change or delete a node.
+	if !IsAuthByUser(c) || !IsNodeManager(c) {
 		return JSONProblemf(c, http.StatusForbidden, "NodeManager privilege required")
 	}
 	if body.Nodename == nil || *body.Nodename == "" {
