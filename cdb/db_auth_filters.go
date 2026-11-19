@@ -42,43 +42,17 @@ type QFilterInput struct {
 	ResolveUserGroupIDs      func(ctx context.Context) ([]int64, error)
 }
 
-// NodeAccessFilter returns a SQL clause and args to restrict node access by team_responsible.
-// If isManager is true, no filter is returned.
-// If groups is empty, only nodes with team_responsible = 'Everybody' are allowed.
-func NodeAccessFilter(groups []string, isManager bool) (string, []any) {
-	if isManager {
-		return "", nil
-	}
-
-	clean := cleanGroups(groups)
-	if len(clean) == 0 {
-		return " AND nodes.team_responsible = 'Everybody'", nil
-	}
-
-	clause := " AND (nodes.team_responsible = 'Everybody' OR nodes.team_responsible IN (?"
-	args := []any{clean[0]}
-	for i := 1; i < len(clean); i++ {
-		clause += ", ?"
-		args = append(args, clean[i])
-	}
-	clause += "))"
-
-	return clause, args
-}
-
-// PublishedNodeIDsForGroups returns node ids accessible by the provided groups.
-// It includes nodes with team_responsible = 'Everybody'.
+// PublishedNodeIDsForGroups returns the ids of the nodes the groups may see:
+// those of an app the groups are responsible for, as the nodes list. It used
+// to follow the team_responsible of the nodes, which every node registered
+// anonymously sets to Everybody.
 func (oDb *DB) PublishedNodeIDsForGroups(ctx context.Context, groups []string) ([]string, error) {
 	clean := cleanGroups(groups)
-
-	query := "SELECT node_id FROM nodes WHERE team_responsible = 'Everybody'"
-	args := []any{}
-	if len(clean) > 0 {
-		query += " OR team_responsible IN (" + Placeholders(len(clean)) + ")"
-		for _, g := range clean {
-			args = append(args, g)
-		}
+	if len(clean) == 0 {
+		return []string{}, nil
 	}
+	scope, args := appScope("nodes.app", clean, false)
+	query := "SELECT node_id FROM nodes WHERE " + scope
 
 	rows, err := oDb.DB.QueryContext(ctx, query, args...)
 	if err != nil {

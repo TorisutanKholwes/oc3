@@ -31,6 +31,9 @@ func (a *Api) GetNodeAlerts(c echo.Context, nodeId string, params server.GetNode
 	if err != nil {
 		return err
 	}
+	if err := a.requireNodeVisible(c, log, node); err != nil {
+		return err
+	}
 
 	groups := UserGroupsFromContext(c)
 	isManager := IsManager(c)

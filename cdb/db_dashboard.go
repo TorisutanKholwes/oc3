@@ -322,9 +322,7 @@ func (oDb *DB) GetNodeAlerts(ctx context.Context, nodeID string, p ListParams) (
 		clean := cleanGroups(p.Groups)
 
 		if len(clean) == 0 {
-			query += ` AND (
-				dashboard.node_id IN (SELECT n.node_id FROM nodes n WHERE n.team_responsible = 'Everybody')
-			)`
+			query += " AND 1=0"
 		} else {
 			placeholders := Placeholders(len(clean))
 			query += ` AND (
@@ -338,8 +336,10 @@ func (oDb *DB) GetNodeAlerts(ctx context.Context, nodeID string, p ListParams) (
 				OR
 				dashboard.node_id IN (
 					SELECT n.node_id FROM nodes n
-					WHERE n.team_responsible = 'Everybody'
-					   OR n.team_responsible IN (` + placeholders + `)
+					JOIN apps a ON n.app = a.app
+					JOIN apps_responsibles ar ON ar.app_id = a.id
+					JOIN auth_group ag ON ag.id = ar.group_id
+					WHERE ag.role IN (` + placeholders + `)
 				)
 			)`
 			for _, g := range clean {

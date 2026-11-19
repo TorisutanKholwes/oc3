@@ -1190,10 +1190,11 @@ func buildCompStatusQuery(groups []string, isManager bool, selectExprs []string)
 		if len(clean) == 0 {
 			query += "\nWHERE 1=0"
 		} else {
-			query += "\nWHERE (nodes.team_responsible = 'Everybody' OR nodes.team_responsible IN (" + Placeholders(len(clean)) + "))"
-			for _, g := range clean {
-				args = append(args, g)
-			}
+			// The runs of the nodes of an app the groups are responsible
+			// for, as the nodes list.
+			scope, scopeArgs := appScope("nodes.app", clean, false)
+			query += "\nWHERE " + scope
+			args = append(args, scopeArgs...)
 		}
 	} else {
 		query += "\nWHERE 1=1"
