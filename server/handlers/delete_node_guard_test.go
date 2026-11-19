@@ -28,6 +28,13 @@ func TestDeleteNodeDenied(t *testing.T) {
 			}
 			return rec.Code, rec.Body.String()
 		}},
+		{"DELETE /clusters/{cluster_id}", func(a *Api, groups ...string) (int, string) {
+			c, rec := aiContext(http.MethodDelete, "/clusters/c1", "", groups...)
+			if err := a.DeleteCluster(c, "c1"); err == nil {
+				t.Errorf("DeleteCluster: no error once denied")
+			}
+			return rec.Code, rec.Body.String()
+		}},
 	} {
 		code, body := tc.call(a, "ops")
 		if code != http.StatusForbidden || body != `{"text":"NodeManager privilege required"}`+"\n" {

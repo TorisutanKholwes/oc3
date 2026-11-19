@@ -8586,6 +8586,40 @@ paths:
       security:
         - basicAuth: [ ]
         - bearerAuth: [ ]
+    delete:
+      operationId: DeleteCluster
+      description: |
+        Delete a cluster from the collector: its nodes and its services, with
+        everything that refers to them (instances, resources, alerts, checks,
+        packages, tags, registrations…), its heartbeats, its declaration with
+        its bootstrap tokens and enrollments, and the om3 grants given on it.
+        The history of its orchestration runs stays. The agents of a cluster
+        still running must register again to report. NodeManager privilege,
+        and responsibility for every node and service of the cluster (a
+        Manager is responsible for them all).
+      parameters:
+        - in: path
+          name: cluster_id
+          required: true
+          description: Cluster identifier (clusters.cluster_id, a uuid)
+          schema:
+            type: string
+      tags:
+        - collector
+      responses:
+        204:
+          description: Deleted
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+        - bearerAuth: [ ]
 
   /clusters/{cluster_id}/declaration:
     get:
