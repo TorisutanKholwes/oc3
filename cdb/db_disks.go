@@ -21,10 +21,12 @@ func buildDisksQuery(groups []string, isManager bool, selectExprs []string, filt
 			for i, g := range cleanGroups {
 				args[i] = g
 			}
+			// The use of the disks by the nodes of the caller's apps, one row
+			// each: a disk shared with nodes of other apps does not show
+			// them, nor their services.
 			q = q.WhereRaw(
-				"diskinfo.disk_id IN ("+
-					"SELECT sd.disk_id FROM svcdisks sd"+
-					" JOIN nodes n ON sd.node_id = n.node_id"+
+				"svcdisks.node_id IN ("+
+					"SELECT n.node_id FROM nodes n"+
 					" JOIN apps a ON n.app = a.app"+
 					" JOIN apps_responsibles ar ON ar.app_id = a.id"+
 					" JOIN auth_group ag ON ag.id = ar.group_id"+
