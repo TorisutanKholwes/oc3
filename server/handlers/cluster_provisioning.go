@@ -221,6 +221,12 @@ func (a *Api) PostClusters(c echo.Context) error {
 	} else {
 		d.ClusterID = uuid.New().String()
 	}
+	// The members of a cluster reporting already enroll the nodes
+	// bootstrapped into it: declaring it takes the responsibility of its
+	// nodes, as of the app of the nodes declared.
+	if err := requireProvisioningApps(c, ctx, log, a.ODB, d.ClusterID, d.App); err != nil {
+		return err
+	}
 	if err := a.ODB.InsertClusterDeclaration(ctx, d); errors.Is(err, cdb.ErrClusterDeclared) {
 		return JSONProblemf(c, http.StatusConflict, "the cluster %s is declared already", d.ClusterID)
 	} else if err != nil {
@@ -282,6 +288,11 @@ func (a *Api) PutClusterDeclaration(c echo.Context, clusterId server.InPathClust
 	app, heartbeats := d.App, d.Heartbeats
 	if body.App != nil {
 		app = *body.App
+	}
+	if err := requireProvisioningApps(c, ctx, log, a.ODB, clusterId, d.App, app); err != nil {
+		return err
+	}
+	if body.App != nil {
 		if app != "" {
 			if ok, err := a.ODB.AppExists(ctx, app); err != nil {
 				log.Error("cannot verify app", logkey.Error, err)
@@ -324,6 +335,14 @@ func (a *Api) DeleteClusterDeclaration(c echo.Context, clusterId server.InPathCl
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), a.SyncTimeout)
 	defer cancel()
+	if d, err := a.ODB.ClusterDeclaration(ctx, clusterId); err != nil {
+		log.Error("cannot read the declaration", logkey.Error, err)
+		return JSONProblemf(c, http.StatusInternalServerError, "cannot read the declaration")
+	} else if d == nil {
+		return JSONProblemf(c, http.StatusNotFound, "the cluster %s is not declared", clusterId)
+	} else if err := requireProvisioningApps(c, ctx, log, a.ODB, clusterId, d.App); err != nil {
+		return err
+	}
 	found, err := a.ODB.DeleteClusterDeclaration(ctx, clusterId)
 	if err != nil {
 		log.Error("cannot delete the declaration", logkey.Error, err)
@@ -377,6 +396,9 @@ func (a *Api) PostNodeBootstrapToken(c echo.Context, nodeId server.InPathNodeId)
 		return JSONProblemf(c, http.StatusInternalServerError, "cannot read the declaration")
 	} else if d == nil {
 		return JSONProblemf(c, http.StatusConflict, "the cluster %s of the node is not declared", node.ClusterID)
+	} else if err := requireProvisioningApps(c, ctx, log, a.ODB, node.ClusterID, d.App, node.App); err != nil {
+		// The token gives whoever holds it the identity of the node.
+		return err
 	}
 	token, err := newBootstrapToken()
 	if err != nil {
@@ -894,7 +916,7 @@ func (a *Api) PostClusterDeclarationNode(c echo.Context, clusterId server.InPath
 	}
 	if len(existing) > 0 {
 		return JSONProblemf(c, http.StatusConflict,
-			"a node %s exists in another cluster: move it to this cluster (POST /nodes/{node_id} cluster_id) or delete it", body.Nodename)
+			"a node %s exists in another cluster: a Manager moves it to this cluster (POST /nodes/{node_id} cluster_id), or delete it", body.Nodename)
 	}
 	app := d.App
 	if body.App != nil && *body.App != "" {
@@ -908,6 +930,9 @@ func (a *Api) PostClusterDeclarationNode(c echo.Context, clusterId server.InPath
 		return JSONProblemf(c, http.StatusInternalServerError, "cannot verify app")
 	} else if !ok {
 		return JSONProblemf(c, http.StatusBadRequest, "unknown app %s", app)
+	}
+	if err := requireProvisioningApps(c, ctx, log, a.ODB, clusterId, d.App, app); err != nil {
+		return err
 	}
 	teamResponsible := ""
 	if user := UserInfoFromContext(c); user != nil {

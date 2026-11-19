@@ -8538,7 +8538,8 @@ paths:
         of a cluster reporting already, its nodes are the seed and every node
         bootstrapped joins it. Declare its nodes with POST /nodes (cluster_id),
         then issue their tokens (POST /nodes/{node_id}/bootstrap_token).
-        Manager or NodeManager.
+        Manager, or NodeManager responsible for the app and for every
+        node of the cluster when it reports already.
       requestBody:
         required: true
         content:
@@ -8667,7 +8668,8 @@ paths:
       description: |
         Change the app and the heartbeats of a declared cluster. The nodes
         already bootstrapped keep the configuration they were given.
-        Manager or NodeManager.
+        Manager, or NodeManager responsible for the apps and the nodes of
+        the cluster.
       parameters:
         - $ref: '#/components/parameters/inPathClusterId'
       requestBody:
@@ -8703,7 +8705,8 @@ paths:
       description: |
         Delete the declaration of a cluster, its unused bootstrap tokens and
         its enrollments. The cluster, its nodes and their registrations stay.
-        Manager or NodeManager.
+        Manager, or NodeManager responsible for the app and the nodes of
+        the cluster.
       parameters:
         - $ref: '#/components/parameters/inPathClusterId'
       tags:
@@ -8783,7 +8786,9 @@ paths:
         Declare a node of a declared cluster: the collector creates it with the
         cluster_id, the app given or the one of the declaration, the team of the
         caller. A node of that name in the cluster already is returned as is;
-        one in another cluster is refused. Manager or NodeManager.
+        one in another cluster is refused. Manager, or NodeManager
+        responsible for the app, the one of the declaration and the nodes
+        of the cluster.
       parameters:
         - $ref: '#/components/parameters/inPathClusterId'
       requestBody:
@@ -12750,7 +12755,9 @@ paths:
       description: |
         Issue the bootstrap token of a declared node: the node must name a
         cluster with a declaration. The token is shown once, kept hashed; it
-        revokes the unused token issued before. Manager or NodeManager.
+        revokes the unused token issued before. Manager, or NodeManager
+        responsible for the node and the nodes of its cluster: the token
+        gives whoever holds it the identity of the node.
       parameters:
         - $ref: '#/components/parameters/inPathNodeId'
       requestBody:

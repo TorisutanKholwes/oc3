@@ -539,3 +539,22 @@ func (oDb *DB) NodeClustersByNodename(ctx context.Context, nodename string) (map
 	}
 	return m, rows.Err()
 }
+
+// ClusterNodeApps returns the apps of the nodes the collector has in the
+// cluster, the ones a user must be responsible for to provision it.
+func (oDb *DB) ClusterNodeApps(ctx context.Context, clusterID string) ([]string, error) {
+	rows, err := oDb.DB.QueryContext(ctx, "SELECT DISTINCT app FROM nodes WHERE cluster_id = ?", clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("ClusterNodeApps: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var l []string
+	for rows.Next() {
+		var app sql.NullString
+		if err := rows.Scan(&app); err != nil {
+			return nil, fmt.Errorf("ClusterNodeApps: %w", err)
+		}
+		l = append(l, app.String)
+	}
+	return l, rows.Err()
+}
