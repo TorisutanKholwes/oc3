@@ -17211,7 +17211,8 @@ paths:
       operationId: PostUsers
       description: |
         Create a user, with its private group "user_<id>". Requires the UserManager
-        privilege. An email or username already in use is refused with a 409. Without
+        privilege. An email or username already in use is refused with a 409, and so
+        is a full name ("first last") borne by another user or a group. Without
         a password the account exists but cannot sign in with one. A password is
         refused with a 400 when password sign-in is disabled (server.auth.basic_users
         false).
@@ -17597,7 +17598,9 @@ paths:
         their profile is the provider's, 403. Another user's requires the
         UserManager privilege (or Manager), else 403.
         Only the keys given are changed; names are trimmed, at most 128
-        characters, and may be empty. The email must be a valid address, at most 512
+        characters, and may be empty. A changed full name ("first last") borne by
+        another user or by a group is refused (409): the requests know their
+        creator and assignees by it. The email must be a valid address, at most 512
         characters, not used by another user (409): it is the sign-in name, so the
         next requests must authenticate with it. The change is logged with the fields
         changed. Requires user authentication. Returns the user.
