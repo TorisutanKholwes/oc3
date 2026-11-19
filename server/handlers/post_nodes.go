@@ -139,6 +139,9 @@ func (a *Api) PostNodes(c echo.Context) error {
 	return fetchAndReturnNode(c, odb, ctx, nodeID, "cannot fetch created node")
 }
 
+// nodeSelfReadOnlyFields are the properties a node can not change on itself.
+var nodeSelfReadOnlyFields = []string{"app", "nodename", "action_type", "collector"}
+
 // checkNodeConnectTo returns why the connect_to of fields is refused, or "": a
 // host the collector connects to over ssh, see validSSHHost. Empty unsets it.
 func checkNodeConnectTo(fields map[string]any) string {
@@ -157,6 +160,14 @@ func postNodeUpdate(c echo.Context, log interface{ Error(string, ...any) }, odb 
 			return JSONProblemf(c, http.StatusForbidden, "a node can only update itself")
 		}
 		delete(fields, "team_responsible")
+		// What the rights of the collector rest on, that no feed of the
+		// agent sets: its app (responsibility), its name, and how its actions
+		// reach it.
+		for _, key := range nodeSelfReadOnlyFields {
+			if _, ok := fields[key]; ok {
+				return JSONProblemf(c, http.StatusForbidden, "a node can not change its %s", key)
+			}
+		}
 	} else {
 		// Users need NodeManager privilege and must be responsible for the node, as
 		// check_privilege("NodeManager") and node_responsible() of the historical
