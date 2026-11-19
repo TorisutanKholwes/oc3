@@ -74,9 +74,11 @@ func (oDb *DB) GetLog(ctx context.Context, id string, p ListParams, userEmail st
 	if len(p.SelectExprs) == 0 {
 		return nil, fmt.Errorf("getLog: no select expressions")
 	}
-	query := "SELECT " + strings.Join(p.SelectExprs, ", ") +
+	// An event of the caller may name a node or a service of another app.
+	selectExprs, selectArgs := maskJoinedColumns(p.SelectExprs, p.Groups, p.IsManager, nodesMask, servicesMask)
+	query := "SELECT " + strings.Join(selectExprs, ", ") +
 		" FROM log" + logJoins + " WHERE log.id = ?"
-	args := []any{id}
+	args := append(selectArgs, id)
 	if cond, condArgs := logsVisibility(p, userEmail); cond != "" {
 		query += " AND " + cond
 		args = append(args, condArgs...)
@@ -102,9 +104,11 @@ func (oDb *DB) GetLogs(ctx context.Context, p ListParams, fset LogsFiltersetFilt
 	if len(p.SelectExprs) == 0 {
 		return nil, fmt.Errorf("getLogs: no select expressions")
 	}
-	query := "SELECT " + strings.Join(p.SelectExprs, ", ") +
+	// An event of the caller may name a node or a service of another app.
+	selectExprs, selectArgs := maskJoinedColumns(p.SelectExprs, p.Groups, p.IsManager, nodesMask, servicesMask)
+	query := "SELECT " + strings.Join(selectExprs, ", ") +
 		" FROM log" + logJoins + " WHERE log.id > 0"
-	args := []any{}
+	args := selectArgs
 	if cond, condArgs := logsVisibility(p, userEmail); cond != "" {
 		query += " AND " + cond
 		args = append(args, condArgs...)

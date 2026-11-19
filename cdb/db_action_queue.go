@@ -81,11 +81,13 @@ func buildActionsQuery(p ListParams, idCond string, idArgs []any) (string, []any
 		return "", nil, fmt.Errorf("buildActionsQuery: no columns selected")
 	}
 
+	// An action on a node of the caller may be of a service of another app, and
+	// the converse.
+	selectExprs, args := maskJoinedColumns(p.SelectExprs, p.Groups, p.IsManager, nodesMask, servicesMask)
 	sb := &strings.Builder{}
-	fmt.Fprintf(sb, "SELECT %s\nFROM action_queue%s", strings.Join(p.SelectExprs, ", "), actionQueueJoins)
+	fmt.Fprintf(sb, "SELECT %s\nFROM action_queue%s", strings.Join(selectExprs, ", "), actionQueueJoins)
 
 	var conds []string
-	var args []any
 
 	if idCond != "" {
 		conds = append(conds, idCond)

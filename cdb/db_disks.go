@@ -9,8 +9,10 @@ import (
 
 func buildDisksQuery(groups []string, isManager bool, selectExprs []string, filters []ColumnFilter) (string, []any, error) {
 	q := From(schema.TDiskinfo).
-		LeftJoin(schema.TSvcdisks, schema.TNodes, schema.TServices, schema.TApps).
-		RawSelect(selectExprs...)
+		LeftJoin(schema.TSvcdisks, schema.TNodes, schema.TServices, schema.TApps)
+	// The service using a disk on a node of the caller may be of another app.
+	selectExprs, selectArgs := maskJoinedColumns(selectExprs, groups, isManager, servicesMask)
+	q = q.RawSelect(selectExprs...)
 
 	if !isManager {
 		cleanGroups := cleanGroups(groups)
@@ -46,7 +48,7 @@ func buildDisksQuery(groups []string, isManager bool, selectExprs []string, filt
 	if err != nil {
 		return "", nil, fmt.Errorf("buildDisksQuery: %w", err)
 	}
-	return query, args, nil
+	return query, append(selectArgs, args...), nil
 }
 
 func (oDb *DB) GetDisk(ctx context.Context, diskID string, p ListParams) ([]map[string]any, error) {
