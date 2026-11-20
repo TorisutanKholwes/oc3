@@ -14,7 +14,9 @@ import (
 
 // GetSchedulerTasks handles GET /scheduler/tasks.
 func (a *Api) GetSchedulerTasks(c echo.Context, params server.GetSchedulerTasksParams) error {
-	if err := requireUserAuth(c); err != nil {
+	// The tasks, their runs and their errors tell the inside of the
+	// collector: a Manager only, as changing them.
+	if err := requireManager(c); err != nil {
 		return err
 	}
 	return a.handleList(c, "GetSchedulerTasks", "scheduler_task", listEndpointParams{
@@ -28,7 +30,9 @@ func (a *Api) GetSchedulerTasks(c echo.Context, params server.GetSchedulerTasksP
 
 // GetSchedulerTask handles GET /scheduler/tasks/{task_name}.
 func (a *Api) GetSchedulerTask(c echo.Context, taskName server.InPathSchedulerTaskName, params server.GetSchedulerTaskParams) error {
-	if err := requireUserAuth(c); err != nil {
+	// The tasks, their runs and their errors tell the inside of the
+	// collector: a Manager only, as changing them.
+	if err := requireManager(c); err != nil {
 		return err
 	}
 	return a.getSchedulerTask(c, "GetSchedulerTask", taskName, params.Props)
@@ -90,7 +94,9 @@ func (a *Api) PutSchedulerTask(c echo.Context, taskName server.InPathSchedulerTa
 
 // GetSchedulerRuns handles GET /scheduler/runs.
 func (a *Api) GetSchedulerRuns(c echo.Context, params server.GetSchedulerRunsParams) error {
-	if err := requireUserAuth(c); err != nil {
+	// The tasks, their runs and their errors tell the inside of the
+	// collector: a Manager only, as changing them.
+	if err := requireManager(c); err != nil {
 		return err
 	}
 	return a.handleList(c, "GetSchedulerRuns", "scheduler_run", listEndpointParams{

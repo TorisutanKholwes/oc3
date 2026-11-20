@@ -80,8 +80,8 @@ func schedulerTestAPI(t *testing.T) (*Api, *sql.DB) {
 
 // TestSchedulerTasks lists the tasks with their next run and the counts of
 // their runs of the last 24 hours, lists the runs, and disables and enables a
-// task: a Manager only, not a subtask nor an undeclared task, each change
-// logged.
+// task: a Manager only, reading as changing, not a subtask nor an undeclared
+// task, each change logged.
 func TestSchedulerTasks(t *testing.T) {
 	a, pool := schedulerTestAPI(t)
 	testExec := func(statements ...string) {
@@ -115,7 +115,17 @@ func TestSchedulerTasks(t *testing.T) {
 
 	c, rec := aiContext(http.MethodGet, "/scheduler/tasks", "", ops...)
 	_ = a.GetSchedulerTasks(c, server.GetSchedulerTasksParams{})
-	expect(rec, http.StatusOK, "list as Ops")
+	expect(rec, http.StatusForbidden, "list as Ops")
+	c, rec = aiContext(http.MethodGet, "/scheduler/runs", "", ops...)
+	_ = a.GetSchedulerRuns(c, server.GetSchedulerRunsParams{})
+	expect(rec, http.StatusForbidden, "list the runs as Ops")
+	c, rec = aiContext(http.MethodGet, "/scheduler/tasks/alerts_1d", "", ops...)
+	_ = a.GetSchedulerTask(c, "alerts_1d", server.GetSchedulerTaskParams{})
+	expect(rec, http.StatusForbidden, "read a task as Ops")
+
+	c, rec = aiContext(http.MethodGet, "/scheduler/tasks", "", manager...)
+	_ = a.GetSchedulerTasks(c, server.GetSchedulerTasksParams{})
+	expect(rec, http.StatusOK, "list as Manager")
 	rows := sysrepRows(t, rec)
 	var names []string
 	for _, r := range rows {
@@ -142,13 +152,13 @@ func TestSchedulerTasks(t *testing.T) {
 	expect(rec, http.StatusUnauthorized, "list as a node")
 
 	filter := server.InQueryFilter{"status:eq:failed"}
-	c, rec = aiContext(http.MethodGet, "/scheduler/runs", "", ops...)
+	c, rec = aiContext(http.MethodGet, "/scheduler/runs", "", manager...)
 	_ = a.GetSchedulerRuns(c, server.GetSchedulerRunsParams{Filter: &filter})
 	expect(rec, http.StatusOK, "list the failed runs")
 	if runs := sysrepRows(t, rec); len(runs) != 1 || runs[0]["error"] != "boom" || runs[0]["task_name"] != "alerts_1d" {
 		t.Errorf("failed runs %v", runs)
 	}
-	c, rec = aiContext(http.MethodGet, "/scheduler/runs", "", ops...)
+	c, rec = aiContext(http.MethodGet, "/scheduler/runs", "", manager...)
 	_ = a.GetSchedulerRuns(c, server.GetSchedulerRunsParams{})
 	if runs := sysrepRows(t, rec); len(runs) != 4 || runs[0]["task_name"] != "scrub_1m" || runs[0]["duration_ms"] != float64(300) {
 		t.Errorf("runs, the last first: %v", runs)
@@ -174,7 +184,7 @@ func TestSchedulerTasks(t *testing.T) {
 		t.Errorf("%d log entries, %v", logs, err)
 	}
 
-	c, rec = aiContext(http.MethodGet, "/scheduler/tasks/x", "", ops...)
+	c, rec = aiContext(http.MethodGet, "/scheduler/tasks/x", "", manager...)
 	_ = a.GetSchedulerTask(c, "alerts_1d: alert_frozen", server.GetSchedulerTaskParams{})
 	expect(rec, http.StatusOK, "read a subtask")
 }

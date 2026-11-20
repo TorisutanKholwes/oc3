@@ -9422,7 +9422,7 @@ paths:
         and timeout in seconds, whether it is disabled, its last run (status,
         begin, duration, error), its next run for an enabled task, and the
         count, failures and durations of its runs of the last 24 hours.
-        Requires a user authentication.
+        Manager only.
       parameters:
         - $ref: '#/components/parameters/inQueryProps'
         - $ref: '#/components/parameters/inQueryLimit'
@@ -9454,7 +9454,7 @@ paths:
   /scheduler/tasks/{task_name}:
     get:
       operationId: GetSchedulerTask
-      description: A task or a subtask of the scheduler. Requires a user authentication.
+      description: A task or a subtask of the scheduler. Manager only.
       parameters:
         - $ref: '#/components/parameters/inPathSchedulerTaskName'
         - $ref: '#/components/parameters/inQueryProps'
@@ -9524,7 +9524,7 @@ paths:
       description: |
         List the runs of the scheduler tasks and subtasks of the last 7 days,
         the last first: filter on task_name for the runs of a task, on status
-        (ok or failed) for the failures. Requires a user authentication.
+        (ok or failed) for the failures. Manager only.
       parameters:
         - $ref: '#/components/parameters/inQueryProps'
         - $ref: '#/components/parameters/inQueryLimit'
