@@ -116,6 +116,13 @@ paths:
         or ruleset, Wake On LAN, the root password rotation and agent options are
         not supported.
 
+        A reboot or a shutdown takes the node down while the agent runs it, so
+        the agent never posts its result: the collector ends it as done, ret 0,
+        once the node reports a boot later than the action was dequeued (an om3
+        agent, through its daemon status), and a shutdown also once the node is
+        silent, past scheduler.task.close_shutdown.max_age (5m): no peer sees it
+        beating, or, with no peer, it no longer communicates.
+
         One entry answers with the queued action, as GET /actions/{id} does, or
         with a problem. A list always answers 200, with the queued actions in
         data and one message per refused entry in error, and in refusals the
