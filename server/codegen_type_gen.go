@@ -8050,6 +8050,27 @@ type TagAgentInfo struct {
 	Info string `json:"info"`
 }
 
+// WakeAgentInfo defines model for WakeAgentInfo.
+type WakeAgentInfo struct {
+	// ActionId the id of the start action in the action queue
+	ActionId int64 `json:"action_id"`
+
+	// Hypervisor the node the container is started on
+	Hypervisor string `json:"hypervisor"`
+
+	// Nodename the node to wake
+	Nodename string `json:"nodename"`
+
+	// Path the service holding the container
+	Path string `json:"path"`
+
+	// Queued false when a start queued before and not done yet is returned
+	Queued bool `json:"queued"`
+
+	// Rid the container resource
+	Rid string `json:"rid"`
+}
+
 // basicAuthContextKey is the context key for basicAuth security scheme
 type basicAuthContextKey string
 
@@ -8247,6 +8268,12 @@ type DeleteAgentTagParams struct {
 type PostAgentTagParams struct {
 	// Path The object of the node, as namespace/kind/name. Default the node.
 	Path *InQueryAgentPath `form:"path,omitempty" json:"path,omitempty"`
+}
+
+// PostAgentWakeParams defines parameters for PostAgentWake.
+type PostAgentWakeParams struct {
+	// Nodename the node to wake, a node of the cluster of the caller
+	Nodename string `form:"nodename" json:"nodename"`
 }
 
 // GetAIResourcesParams defines parameters for GetAIResources.

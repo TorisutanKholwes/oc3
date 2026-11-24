@@ -21307,6 +21307,41 @@ paths:
           $ref: '#/components/responses/500'
       security:
         - basicAuth: [ ]
+  /agent/wake:
+    post:
+      operationId: PostAgentWake
+      description: |
+        Wake a powered off virtual machine node of the cluster of the calling
+        node: queue the start of the container resource of its hypervisor whose
+        virtual machine has the machine uuid the node reported, the uuid key of
+        the resource info. The hypervisor must report to this collector. A start
+        already queued and not done is returned rather than queued again.
+      parameters:
+        - in: query
+          name: nodename
+          required: true
+          description: the node to wake, a node of the cluster of the caller
+          schema:
+            type: string
+      tags: [ agent ]
+      responses:
+        200:
+          $ref: '#/components/responses/WakeAgentInfo'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        500:
+          $ref: '#/components/responses/500'
+      security:
+        - basicAuth: [ ]
+
   /agent/compliance/data:
     get:
       operationId: GetAgentComplianceData
@@ -26238,6 +26273,39 @@ components:
             properties:
               info:
                 type: string
+    WakeAgentInfo:
+      description: The start of the container running the node, queued.
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - nodename
+              - hypervisor
+              - path
+              - rid
+              - action_id
+              - queued
+            properties:
+              nodename:
+                type: string
+                description: the node to wake
+              hypervisor:
+                type: string
+                description: the node the container is started on
+              path:
+                type: string
+                description: the service holding the container
+              rid:
+                type: string
+                description: the container resource
+              action_id:
+                type: integer
+                format: int64
+                description: the id of the start action in the action queue
+              queued:
+                type: boolean
+                description: false when a start queued before and not done yet is returned
     ComplianceAgentInfo:
       description: What was done.
       content:
