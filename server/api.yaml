@@ -26692,6 +26692,9 @@ components:
           type: string
         serial:
           type: string
+        machine_uuid:
+          type: string
+          description: SMBIOS system uuid of the node, as the agent reports it. A hypervisor sets it to the uuid of the virtual machine.
         model:
           type: string
         manufacturer:

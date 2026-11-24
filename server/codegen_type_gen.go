@@ -3269,6 +3269,9 @@ type CompNodeModulesetRow struct {
 	LocRack             *string `json:"loc_rack,omitempty"`
 	LocRoom             *string `json:"loc_room,omitempty"`
 	LocZip              *string `json:"loc_zip,omitempty"`
+
+	// MachineUuid SMBIOS system uuid of the node, as the agent reports it. A hypervisor sets it to the uuid of the virtual machine.
+	MachineUuid         *string `json:"machine_uuid,omitempty"`
 	MaintenanceEnd      *string `json:"maintenance_end,omitempty"`
 	Manufacturer        *string `json:"manufacturer,omitempty"`
 	MemBanks            *int    `json:"mem_banks,omitempty"`
@@ -3372,6 +3375,9 @@ type CompNodeRulesetRow struct {
 	LocRack             *string `json:"loc_rack,omitempty"`
 	LocRoom             *string `json:"loc_room,omitempty"`
 	LocZip              *string `json:"loc_zip,omitempty"`
+
+	// MachineUuid SMBIOS system uuid of the node, as the agent reports it. A hypervisor sets it to the uuid of the virtual machine.
+	MachineUuid         *string `json:"machine_uuid,omitempty"`
 	MaintenanceEnd      *string `json:"maintenance_end,omitempty"`
 	Manufacturer        *string `json:"manufacturer,omitempty"`
 	MemBanks            *int    `json:"mem_banks,omitempty"`
@@ -5518,6 +5524,9 @@ type NodeRow struct {
 	LocRack             *string `json:"loc_rack,omitempty"`
 	LocRoom             *string `json:"loc_room,omitempty"`
 	LocZip              *string `json:"loc_zip,omitempty"`
+
+	// MachineUuid SMBIOS system uuid of the node, as the agent reports it. A hypervisor sets it to the uuid of the virtual machine.
+	MachineUuid         *string `json:"machine_uuid,omitempty"`
 	MaintenanceEnd      *string `json:"maintenance_end,omitempty"`
 	Manufacturer        *string `json:"manufacturer,omitempty"`
 	MemBanks            *int    `json:"mem_banks,omitempty"`
