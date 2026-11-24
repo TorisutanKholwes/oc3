@@ -17,7 +17,7 @@ import (
 // name, so the command an agent splits in words names one node.
 var wakeNodenamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
-// wakeCommand is the node action a live peer runs to wake the node: om node
+// wakeCommand is the node action a peer up runs to wake the node: om node
 // wake asks the collector first, which starts the container of a virtual
 // machine node on its hypervisor, then sends Wake-on-LAN magic packets, for a
 // physical node.
@@ -29,10 +29,16 @@ func wakeCommand(nodename string) (string, error) {
 }
 
 // queueNodeWake queues the wake of a node down, as the node can not dequeue
-// its own action: the om node wake command on a live peer of its cluster.
-// With no live peer, for a virtual machine node, it queues the start of its
-// container on its hypervisor instead. The caller checked the privilege and
-// the responsibility for the node.
+// its own action: the om node wake command on a peer of its cluster up now.
+// With no peer up, for a virtual machine node, it queues the start of its
+// container on its hypervisor instead. A node up has nothing queued, a notice
+// saying so. The caller checked the privilege and the responsibility for the
+// node.
+//
+// Up is what the last status of the cluster says, not the last_comm of the
+// node: the pings of the cluster refresh the one of every node, a peer
+// powered off included, which would be picked to run a wake it never
+// dequeues.
 func (a *Api) queueNodeWake(act actionActor, log *slog.Logger, ctx context.Context, node *cdb.DBNode) (*queuedAction, error) {
 	odb := a.ODB
 	command, err := wakeCommand(node.Nodename)
@@ -43,10 +49,19 @@ func (a *Api) queueNodeWake(act actionActor, log *slog.Logger, ctx context.Conte
 		return nil, refuseAction(http.StatusConflict, "node %s belongs to no cluster: no peer to wake it from", node.Nodename)
 	}
 
-	peer, err := odb.ClusterLiveNodeExcept(ctx, node.ClusterID, node.NodeID)
+	up, err := odb.NodeUp(ctx, node.NodeID)
 	if err != nil {
-		log.Error("cannot find a live peer", logkey.Error, err)
-		return nil, refuseAction(http.StatusInternalServerError, "cannot find a live node of the cluster of %s", node.Nodename)
+		log.Error("cannot tell whether the node is up", logkey.Error, err)
+		return nil, refuseAction(http.StatusInternalServerError, "cannot read the status of node %s", node.Nodename)
+	}
+	if up {
+		return &queuedAction{Command: command, Notice: "node " + node.Nodename + " is already up: nothing queued"}, nil
+	}
+
+	peer, err := odb.ClusterUpNodeExcept(ctx, node.ClusterID, node.NodeID)
+	if err != nil {
+		log.Error("cannot find a peer up", logkey.Error, err)
+		return nil, refuseAction(http.StatusInternalServerError, "cannot find a node up in the cluster of %s", node.Nodename)
 	}
 	if peer == nil {
 		return a.queueNodeWakeByHypervisor(act, log, ctx, node)
@@ -114,7 +129,7 @@ func (a *Api) queueNodeWake(act actionActor, log *slog.Logger, ctx context.Conte
 	}, nil
 }
 
-// queueNodeWakeByHypervisor wakes a node of a cluster with no live node, as
+// queueNodeWakeByHypervisor wakes a node of a cluster with no node up, as
 // every node of a two nodes cluster powered off: the start of the container
 // running it, for a virtual machine node. A physical node has no way.
 func (a *Api) queueNodeWakeByHypervisor(act actionActor, log *slog.Logger, ctx context.Context, node *cdb.DBNode) (*queuedAction, error) {
@@ -123,7 +138,7 @@ func (a *Api) queueNodeWakeByHypervisor(act actionActor, log *slog.Logger, ctx c
 		var refusal *actionRefusal
 		if errors.As(err, &refusal) && refusal.status != http.StatusInternalServerError {
 			return nil, refuseAction(http.StatusConflict,
-				"no live node in the cluster of %s to wake it from, and no container to start: %s", node.Nodename, refusal.msg)
+				"no node up in the cluster of %s to wake it from, and no container to start: %s", node.Nodename, refusal.msg)
 		}
 		return nil, err
 	}

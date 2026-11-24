@@ -136,6 +136,10 @@ paths:
         index of each refused entry in the list with its reason; entries
         differing only by rid are merged into one action on those resources, a
         refusal then naming each of them.
+
+        An entry accepted with nothing to queue, as the wake of a node already
+        up, is named in notices, by its index with the reason: one entry alone
+        then answers as a list, its notice in info.
       requestBody:
         required: true
         content:
@@ -33900,6 +33904,20 @@ components:
               index:
                 type: integer
                 description: Index of the refused entry in the list sent, from 0
+              message:
+                type: string
+        notices:
+          type: array
+          description: |
+            The entries accepted with nothing to queue, as the wake of a node
+            already up, by index in the list sent with the reason.
+          items:
+            type: object
+            required: [index, message]
+            properties:
+              index:
+                type: integer
+                description: Index of the entry in the list sent, from 0
               message:
                 type: string
 

@@ -2209,8 +2209,16 @@ type ActionEnqueueListResult struct {
 	Data []map[string]interface{} `json:"data"`
 
 	// Error One message per refused entry, naming its target
-	Error    []string `json:"error"`
-	Info     []string `json:"info"`
+	Error []string `json:"error"`
+	Info  []string `json:"info"`
+
+	// Notices The entries accepted with nothing to queue, as the wake of a node
+	// already up, by index in the list sent with the reason.
+	Notices *[]struct {
+		// Index Index of the entry in the list sent, from 0
+		Index   int    `json:"index"`
+		Message string `json:"message"`
+	} `json:"notices,omitempty"`
 	Refusals []struct {
 		// Index Index of the refused entry in the list sent, from 0
 		Index   int    `json:"index"`

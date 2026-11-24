@@ -93,6 +93,9 @@ type queuedAction struct {
 	Command string
 	NodeID  string
 	Info    string
+	// Notice says why nothing was queued for an entry accepted, as the wake
+	// of a node already up: ID is then 0.
+	Notice string
 }
 
 // actionRefusal is a queueing request that did not go through, with the HTTP
