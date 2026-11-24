@@ -34,6 +34,8 @@ type wakeStart struct {
 // own cluster, and only the start of the one container running that node is
 // queued, never another action. A start already queued and not done yet is
 // returned rather than queued twice, as every relay of the cluster may ask.
+// A node up, as the last status of its cluster says, has nothing queued: the
+// answer says it is awake.
 func (a *Api) PostAgentWake(c echo.Context, params server.PostAgentWakeParams) error {
 	log := echolog.GetLogHandler(c, "PostAgentWake")
 	ctx := c.Request().Context()
@@ -64,6 +66,17 @@ func (a *Api) PostAgentWake(c echo.Context, params server.PostAgentWakeParams) e
 	}
 	if targetID == "" {
 		return JSONProblemf(c, http.StatusNotFound, "no node %s in the cluster of %s", params.Nodename, caller.Nodename)
+	}
+
+	// A node up has no container to start: every relay of a wake asks, and
+	// one may ask once the node is back, as a node itself just back would.
+	up, err := a.ODB.NodeUp(ctx, targetID)
+	if err != nil {
+		return httpProblem(c, httpInternal(log, "cannot read the status of the node to wake", err))
+	}
+	if up {
+		awake := true
+		return c.JSON(http.StatusOK, server.WakeAgentInfo{Nodename: params.Nodename, Awake: &awake})
 	}
 
 	start, err := a.queueWakeContainerStart(actionActor{email: "node " + caller.Nodename}, log, ctx, params.Nodename, targetID)

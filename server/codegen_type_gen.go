@@ -8063,6 +8063,9 @@ type WakeAgentInfo struct {
 	// ActionId the id of the start action in the action queue
 	ActionId int64 `json:"action_id"`
 
+	// Awake true when the node is up, as the last status of its cluster says, and nothing was queued
+	Awake *bool `json:"awake,omitempty"`
+
 	// Hypervisor the node the container is started on
 	Hypervisor string `json:"hypervisor"`
 
