@@ -111,10 +111,17 @@ paths:
         checks, sysreport, updatecomp, updatepkg, scanscsi,
         reboot, schedule_reboot, unschedule_reboot, shutdown, drain,
         compliance_check, compliance_fix (on every module attached to the node),
-        freeze and thaw on a node; freeze, thaw, abort (of the running
+        freeze, thaw and wake on a node; freeze, thaw, abort (of the running
         orchestration) and updatepkg on a cluster. Compliance actions on a given module, moduleset
-        or ruleset, Wake On LAN, the root password rotation and agent options are
+        or ruleset, the root password rotation and agent options are
         not supported.
+
+        A node down can not dequeue its own wake: it is queued on a live peer of
+        its cluster, as `om node wake --node <node>`, which asks the collector to
+        start the container of a virtual machine node on its hypervisor, else sends
+        Wake-on-LAN magic packets. With no live peer, the start of the container of
+        a virtual machine node is queued on its hypervisor directly; a physical node
+        can not be woken then.
 
         A reboot or a shutdown takes the node down while the agent runs it, so
         the agent never posts its result: the collector ends it as done, ret 0,
