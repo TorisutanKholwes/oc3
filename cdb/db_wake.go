@@ -89,3 +89,19 @@ func (oDb *DB) PendingServiceActionID(ctx context.Context, nodeID, svcID, comman
 	}
 	return id, nil
 }
+
+// PendingNodeActionID returns the id of a node action queued on the node with
+// that command and not done yet, 0 when there is none.
+func (oDb *DB) PendingNodeActionID(ctx context.Context, nodeID, command string) (int64, error) {
+	var id int64
+	err := oDb.DB.QueryRowContext(ctx,
+		"SELECT id FROM action_queue WHERE node_id = ? AND COALESCE(svc_id, '') = '' AND command = ? AND status IN ('Q','N','W','R','S') ORDER BY id DESC LIMIT 1",
+		nodeID, command).Scan(&id)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return 0, nil
+	case err != nil:
+		return 0, fmt.Errorf("pendingNodeActionID: %w", err)
+	}
+	return id, nil
+}
