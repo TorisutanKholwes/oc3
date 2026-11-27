@@ -78,6 +78,24 @@ func (d *daemonDataV3) nodeFrozen(nodename string) (string, error) {
 	}
 }
 
+// nodeBootedAt returns the boot time of the node, the om3 node status
+// booted_at, zero when the node did not report it.
+func (d *daemonDataV3) nodeBootedAt(nodename string) (time.Time, error) {
+	i, ok := mapTo(d.cluster, "node", nodename, "status", "booted_at")
+	if !ok || i == nil {
+		return time.Time{}, nil
+	}
+	v, ok := i.(string)
+	if !ok {
+		return time.Time{}, fmt.Errorf("data v3 got unexpected node booted at value: %s", nodename)
+	}
+	bootedAt, err := time.Parse(time.RFC3339Nano, v)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("data v3 got unexpected node booted at time: %s booted_at value %s", nodename, v)
+	}
+	return bootedAt, nil
+}
+
 func (d *daemonDataV3) nodeHeartbeat(nodename string) ([]heartbeatData, error) {
 	i, ok := mapTo(d.cluster, "node", nodename, "daemon", "heartbeat", "streams")
 	if !ok {

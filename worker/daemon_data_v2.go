@@ -68,6 +68,12 @@ func (d *daemonDataV2) nodeFrozen(nodename string) (s string, err error) {
 	}
 }
 
+// nodeBootedAt returns zero: a v2 daemon status does not say when the node
+// booted.
+func (d *daemonDataV2) nodeBootedAt(string) (time.Time, error) {
+	return time.Time{}, nil
+}
+
 func (d *daemonDataV2) nodeHeartbeat(nodename string) ([]heartbeatData, error) {
 	i, ok := mapTo(d.data, "nodes", nodename, "hb")
 	if !ok {

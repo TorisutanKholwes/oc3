@@ -136,6 +136,7 @@ func setDefaultSchedulerConfig() {
 	viper.SetDefault(s+".task.alert_instances_not_updated.max_age", "16m")
 	viper.SetDefault(s+".task.alert_nodes_not_updated.max_age", "25h")
 	viper.SetDefault(s+".task.alert_service_config_not_updated.max_age", "25h")
+	viper.SetDefault(s+".task.close_shutdown.max_age", "5m")
 	viper.SetDefault(s+".task.log_instances_not_updated.max_age", "2h")
 	viper.SetDefault(s+".task.scrub_checks_live.max_age", "2d")
 	viper.SetDefault(s+".task.scrub_comp_status.max_age", "31d")

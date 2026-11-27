@@ -34,6 +34,7 @@ type (
 	}
 
 	nodeInfoer interface {
+		nodeBootedAt(string) (time.Time, error)
 		nodeFrozen(string) (string, error)
 		nodeHeartbeat(string) ([]heartbeatData, error)
 	}
@@ -156,6 +157,7 @@ func (d *jobFeedDaemonStatus) Operations() []operation {
 		{name: "dataToNodeFrozen", do: d.dataToNodeFrozen, blocking: true},
 		{name: "dataToNodeHeartbeat", do: d.dataToNodeHeartbeat, blocking: true},
 		{name: "heartbeatToDB", do: d.heartbeatToDB, blocking: true},
+		{name: "dataToPowerActions", do: d.dataToPowerActions},
 		{name: "dbFindServices", do: d.dbFindServices, blocking: true},
 		{name: "dbCreateServices", do: d.dbCreateServices, blocking: true},
 		{name: "dbFindServicesLog", do: d.dbFindServicesLog, blocking: true},
@@ -496,6 +498,58 @@ func (d *jobFeedDaemonStatus) heartbeatToDB(ctx context.Context) error {
 		return fmt.Errorf("heartbeatToDB purge outdated %s: %w", d.clusterID, err)
 	}
 	return nil
+}
+
+// dataToPowerActions closes the reboot and shutdown actions of the nodes of
+// the cluster seen booted since: the agent running them never posts their
+// result, the node going down under it.
+//
+// The boot time is the node clock, the dequeue time the database one, as
+// the nodes of a cluster keep their clocks in sync: the boot before the
+// action is normally hours or days older than its dequeue, which a skew can
+// not bring past it.
+func (d *jobFeedDaemonStatus) dataToPowerActions(ctx context.Context) error {
+	bootedAt := make(map[string]time.Time, len(d.byNodeID))
+	nodeIDs := make([]string, 0, len(d.byNodeID))
+	for nodeID, dbNode := range d.byNodeID {
+		t, err := d.data.nodeBootedAt(dbNode.Nodename)
+		if err != nil {
+			return fmt.Errorf("dataToPowerActions %s (%s): %w", dbNode.Nodename, nodeID, err)
+		}
+		if t.IsZero() {
+			continue
+		}
+		bootedAt[nodeID] = t
+		nodeIDs = append(nodeIDs, nodeID)
+	}
+	actions, err := d.oDb.ActionQOpenPowerActions(ctx, nodeIDs...)
+	if err != nil {
+		return fmt.Errorf("dataToPowerActions: %w", err)
+	}
+	for _, a := range actions {
+		t := bootedAt[a.NodeID]
+		if !bootedSince(t, a.DateDequeued) {
+			continue
+		}
+		stdout := fmt.Sprintf("node %s booted at %s", a.Nodename, t.Format(time.RFC3339))
+		closed, err := d.oDb.ActionQClosePowerAction(ctx, a.ID, stdout)
+		if err != nil {
+			return fmt.Errorf("dataToPowerActions: %w", err)
+		}
+		if closed {
+			slog.Info(fmt.Sprintf("dataToPowerActions: %s action %d of node %s closed: %s", a.Action, a.ID, a.Nodename, stdout))
+		}
+	}
+	return nil
+}
+
+// bootedSince tells a node booted after an action was dequeued: a node not
+// reporting its boot time, or an action not dequeued yet, did not.
+func bootedSince(bootedAt, dequeued time.Time) bool {
+	if bootedAt.IsZero() || dequeued.IsZero() {
+		return false
+	}
+	return bootedAt.After(dequeued)
 }
 
 func (d *jobFeedDaemonStatus) dbFindServices(ctx context.Context) error {

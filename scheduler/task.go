@@ -54,6 +54,7 @@ var (
 		TaskSysreport,
 		TaskSysreportPurge,
 		TaskRefreshBActionErrors,
+		TaskCloseShutdownActions,
 		TaskAlertUpdateActionErrors,
 		TaskUpdateVirtualAssets,
 		TaskTrim,
